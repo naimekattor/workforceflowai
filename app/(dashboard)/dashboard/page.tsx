@@ -50,21 +50,21 @@ export default function Dashboard() {
         if (statsResult.status === 'fulfilled') {
           setStats(statsResult.value);
         } else {
-          console.error('Error fetching dashboard stats:', statsResult.reason);
+          console.warn('Dashboard stats unavailable.');
           setStats(null);
         }
 
         if (quotesResult.status === 'fulfilled') {
           setRecentQuotes(quotesResult.value);
         } else {
-          console.error('Error fetching recent quotes:', quotesResult.reason);
+          console.warn('Recent quotes unavailable.');
           setRecentQuotes([]);
         }
 
         if (invoicesResult.status === 'fulfilled') {
           setRecentInvoices(invoicesResult.value);
         } else {
-          console.error('Error fetching recent invoices:', invoicesResult.reason);
+          console.warn('Recent invoices unavailable.');
           setRecentInvoices([]);
         }
       } finally {

@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 
 interface FormData {
@@ -27,14 +27,24 @@ function getSafeCallbackUrl(): string | null {
   return callbackUrl;
 }
 
+function getStringFormValue(formData: globalThis.FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 export default function SignIn() {
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -43,16 +53,16 @@ export default function SignIn() {
     setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
   };
 
-  function validate(): boolean {
+  function validate(data: FormData): boolean {
     const newErrors: FormErrors = {};
 
-    if (!formData.email.trim()) {
+    if (!data.email.trim()) {
       newErrors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       newErrors.email = "Enter a valid email address.";
     }
 
-    if (!formData.password) {
+    if (!data.password) {
       newErrors.password = "Password is required.";
     }
 
@@ -62,15 +72,23 @@ export default function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validate()) return;
+
+    const submittedData = new FormData(e.currentTarget);
+    const nextFormData = {
+      email: getStringFormValue(submittedData, "email"),
+      password: getStringFormValue(submittedData, "password"),
+    };
+
+    setFormData(nextFormData);
+    if (!validate(nextFormData)) return;
 
     setIsLoading(true);
     setErrors({});
 
     try {
       const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
+        email: nextFormData.email,
+        password: nextFormData.password,
         redirect: false,        // handle redirect manually
       });
 
@@ -130,7 +148,14 @@ export default function SignIn() {
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          <form
+            action="/api/auth/fallback-login"
+            className="space-y-5"
+            method="post"
+            onSubmit={handleSubmit}
+            noValidate
+          >
+            <input type="hidden" name="callbackUrl" value="/dashboard" />
 
             {/* Email */}
             <div>
@@ -203,8 +228,8 @@ export default function SignIn() {
             {/* Submit */}
             <div className="pt-2">
               <button
-                type="submit"
-                disabled={isLoading}
+                type={isHydrated ? "submit" : "button"}
+                disabled={!isHydrated || isLoading}
                 className="flex w-full justify-center rounded-lg bg-[#22d3ee] px-4 py-3 text-[15px] font-semibold text-white hover:bg-[#06b6d4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (

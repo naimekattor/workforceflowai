@@ -6,26 +6,57 @@
  * All read/write via OnboardingContext — no localStorage.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OnboardingLayout from '../context/OnboardingLayout';
 import {
   OnboardingCard, CardBody, CardFooter,
-  Field, SectionBox, DynamicStringList, PartnerList,
+  Field, DynamicStringList, PartnerList,
 } from '../components/OnboardingUI';
 import { useOnboarding, getStep3Route } from '../context/OnboardingContext';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function clean(value: string | undefined): string {
+  return value?.trim() ?? '';
+}
+
+function hasItem(items: string[]): boolean {
+  return items.some((item) => Boolean(clean(item)));
+}
+
+function StepError({ message }: { message: string | null }) {
+  if (!message) return null;
+
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {message}
+    </div>
+  );
+}
 
 // ─── Sole Trader ──────────────────────────────────────────────────────────────
 
 export function Step2SoleTrader() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleNext() {
+    if (!clean(data.st_legalName)) {
+      setError('Full legal name is required.');
+      return;
+    }
+
+    router.push(getStep3Route(data.businessType));
+  }
 
   return (
     <OnboardingLayout currentStep={2}>
       <OnboardingCard>
         <CardBody title="Business Details" description="Tell us about yourself as a sole trader.">
           <div className="space-y-4 sm:space-y-5">
+            <StepError message={error} />
             <Field
               label="Full Legal Name" required
               placeholder="As registered with HMRC"
@@ -39,7 +70,7 @@ export function Step2SoleTrader() {
               onChange={e => update('st_tradingName', e.target.value)}
             />
             <Field
-              label="Business Address" required
+              label="Business Address"
               placeholder="Full business address"
               value={data.st_address}
               onChange={e => update('st_address', e.target.value)}
@@ -68,7 +99,7 @@ export function Step2SoleTrader() {
         <CardFooter
           step={2}
           onPrev={() => router.push('/onboarding/step-1')}
-          onNext={() => router.push(getStep3Route(data.businessType))}
+          onNext={handleNext}
         />
       </OnboardingCard>
     </OnboardingLayout>
@@ -80,12 +111,38 @@ export function Step2SoleTrader() {
 export function Step2LimitedCompany() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleNext() {
+    if (!clean(data.lc_companyName)) {
+      setError('Registered company name is required.');
+      return;
+    }
+
+    if (!clean(data.lc_registrationNumber)) {
+      setError('Company registration number is required.');
+      return;
+    }
+
+    if (!clean(data.lc_email)) {
+      setError('Primary contact email is required.');
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(clean(data.lc_email))) {
+      setError('Enter a valid primary contact email.');
+      return;
+    }
+
+    router.push(getStep3Route(data.businessType));
+  }
 
   return (
     <OnboardingLayout currentStep={2}>
       <OnboardingCard>
         <CardBody title="Business Details" description="Tell us about your limited company.">
           <div className="space-y-4 sm:space-y-5">
+            <StepError message={error} />
             <Field
               label="Registered Company Name" required
               placeholder="As registered with Companies House"
@@ -99,7 +156,7 @@ export function Step2LimitedCompany() {
               onChange={e => update('lc_registrationNumber', e.target.value)}
             />
             <Field
-              label="Registered Address" required
+              label="Registered Address"
               placeholder="Company registered address"
               value={data.lc_registeredAddress}
               onChange={e => update('lc_registeredAddress', e.target.value)}
@@ -107,7 +164,7 @@ export function Step2LimitedCompany() {
 
             <div>
               <label className="block text-[12px] sm:text-[13px] font-bold text-slate-800 mb-1.5">
-                Directors <span className="text-red-400">*</span>
+                Directors
               </label>
               <DynamicStringList
                 items={data.lc_directors}
@@ -124,7 +181,7 @@ export function Step2LimitedCompany() {
               onChange={e => update('lc_email', e.target.value)}
             />
             <Field
-              label="Phone Number" required type="tel"
+              label="Phone Number" type="tel"
               placeholder="+44 1234 567890"
               value={data.lc_phone}
               onChange={e => update('lc_phone', e.target.value)}
@@ -141,7 +198,7 @@ export function Step2LimitedCompany() {
         <CardFooter
           step={2}
           onPrev={() => router.push('/onboarding/step-1')}
-          onNext={() => router.push(getStep3Route(data.businessType))}
+          onNext={handleNext}
         />
       </OnboardingCard>
     </OnboardingLayout>
@@ -153,12 +210,28 @@ export function Step2LimitedCompany() {
 export function Step2Partnership() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleNext() {
+    if (!clean(data.p_partnershipName)) {
+      setError('Partnership name is required.');
+      return;
+    }
+
+    if (!data.p_partners.some((partner) => Boolean(clean(partner.name)))) {
+      setError('At least one partner name is required.');
+      return;
+    }
+
+    router.push(getStep3Route(data.businessType));
+  }
 
   return (
     <OnboardingLayout currentStep={2}>
       <OnboardingCard>
         <CardBody title="Business Details" description="Tell us about your partnership.">
           <div className="space-y-4 sm:space-y-5">
+            <StepError message={error} />
             <Field
               label="Partnership Name" required
               placeholder="As registered (or trading name)"
@@ -166,7 +239,7 @@ export function Step2Partnership() {
               onChange={e => update('p_partnershipName', e.target.value)}
             />
             <Field
-              label="Partnership Address" required
+              label="Partnership Address"
               placeholder="Business address"
               value={data.p_address}
               onChange={e => update('p_address', e.target.value)}
@@ -183,13 +256,13 @@ export function Step2Partnership() {
             </div>
 
             <Field
-              label="Primary Contact Email" required type="email"
+              label="Primary Contact Email" type="email"
               placeholder="contact@partnership.com"
               value={data.p_email}
               onChange={e => update('p_email', e.target.value)}
             />
             <Field
-              label="Phone Number" required type="tel"
+              label="Phone Number" type="tel"
               placeholder="+44 1234 567890"
               value={data.p_phone}
               onChange={e => update('p_phone', e.target.value)}
@@ -200,7 +273,7 @@ export function Step2Partnership() {
         <CardFooter
           step={2}
           onPrev={() => router.push('/onboarding/step-1')}
-          onNext={() => router.push(getStep3Route(data.businessType))}
+          onNext={handleNext}
         />
       </OnboardingCard>
     </OnboardingLayout>
@@ -212,12 +285,43 @@ export function Step2Partnership() {
 export function Step2LLP() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleNext() {
+    if (!clean(data.llp_name)) {
+      setError('LLP name is required.');
+      return;
+    }
+
+    if (!clean(data.llp_registrationNumber)) {
+      setError('Company registration number is required.');
+      return;
+    }
+
+    if (!hasItem(data.llp_members)) {
+      setError('At least one designated member is required.');
+      return;
+    }
+
+    if (!clean(data.llp_email)) {
+      setError('Primary contact email is required.');
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(clean(data.llp_email))) {
+      setError('Enter a valid primary contact email.');
+      return;
+    }
+
+    router.push(getStep3Route(data.businessType));
+  }
 
   return (
     <OnboardingLayout currentStep={2}>
       <OnboardingCard>
         <CardBody title="Business Details" description="Tell us about your Limited Liability Partnership.">
           <div className="space-y-4 sm:space-y-5">
+            <StepError message={error} />
             <Field
               label="LLP Name" required
               placeholder="As registered with Companies House"
@@ -231,7 +335,7 @@ export function Step2LLP() {
               onChange={e => update('llp_registrationNumber', e.target.value)}
             />
             <Field
-              label="Registered Address" required
+              label="Registered Address"
               placeholder="LLP registered address"
               value={data.llp_registeredAddress}
               onChange={e => update('llp_registeredAddress', e.target.value)}
@@ -256,7 +360,7 @@ export function Step2LLP() {
               onChange={e => update('llp_email', e.target.value)}
             />
             <Field
-              label="Phone Number" required type="tel"
+              label="Phone Number" type="tel"
               placeholder="+44 1234 567890"
               value={data.llp_phone}
               onChange={e => update('llp_phone', e.target.value)}
@@ -273,7 +377,7 @@ export function Step2LLP() {
         <CardFooter
           step={2}
           onPrev={() => router.push('/onboarding/step-1')}
-          onNext={() => router.push(getStep3Route(data.businessType))}
+          onNext={handleNext}
         />
       </OnboardingCard>
     </OnboardingLayout>

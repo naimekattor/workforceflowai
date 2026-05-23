@@ -3,6 +3,14 @@ import { buildApiUrl } from "@/lib/api/config";
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+if (
+  process.env.NODE_ENV !== "production" &&
+  !process.env.NEXTAUTH_URL &&
+  !process.env.AUTH_TRUST_HOST
+) {
+  process.env.AUTH_TRUST_HOST = "true";
+}
+
 const AUTH_SECRET =
   process.env.NEXTAUTH_SECRET ||
   process.env.AUTH_SECRET ||

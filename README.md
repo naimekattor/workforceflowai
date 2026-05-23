@@ -2,6 +2,20 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Create a local env file first:
+
+```bash
+cp .env.example .env.local
+```
+
+For LAN testing, keep `AUTH_TRUST_HOST=true` so NextAuth uses the current
+request host instead of falling back to `localhost`. If Next.js blocks dev-only
+resources from a custom host, add it to `NEXT_ALLOWED_DEV_ORIGINS`.
+
+For production, set `NEXTAUTH_URL` to the public HTTPS domain, keep a stable
+`NEXTAUTH_SECRET`, and point `NEXT_PUBLIC_API_URL` at the public backend API.
+Do not deploy with `NEXTAUTH_URL=http://localhost:3000`.
+
 First, run the development server:
 
 ```bash

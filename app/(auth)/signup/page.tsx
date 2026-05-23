@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { ApiRequestError, registerUser } from "@/lib/api/auth";
 
@@ -36,8 +36,14 @@ function firstApiMessage(value: unknown): string | undefined {
   return undefined;
 }
 
+function getStringFormValue(formData: globalThis.FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 export default function SignUp() {
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -47,6 +53,10 @@ export default function SignUp() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -55,25 +65,25 @@ export default function SignUp() {
   };
 
   // Client-side validation before hitting the API
-  function validate(): boolean {
+  function validate(data: FormData): boolean {
     const newErrors: FormErrors = {};
 
-    if (!formData.name.trim()) {
+    if (!data.name.trim()) {
       newErrors.name = "Full name is required.";
     }
 
-    if (!formData.email.trim()) {
+    if (!data.email.trim()) {
       newErrors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       newErrors.email = "Enter a valid email address.";
     }
 
-    const passwordError = validatePassword(formData.password);
+    const passwordError = validatePassword(data.password);
     if (passwordError) newErrors.password = passwordError;
 
-    if (!formData.confirmPassword) {
+    if (!data.confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password.";
-    } else if (formData.password !== formData.confirmPassword) {
+    } else if (data.password !== data.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match.";
     }
 
@@ -81,9 +91,19 @@ export default function SignUp() {
     return Object.keys(newErrors).length === 0;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validate()) return;
+
+    const submittedData = new FormData(e.currentTarget);
+    const nextFormData = {
+      name: getStringFormValue(submittedData, "name"),
+      email: getStringFormValue(submittedData, "email"),
+      password: getStringFormValue(submittedData, "password"),
+      confirmPassword: getStringFormValue(submittedData, "confirmPassword"),
+    };
+
+    setFormData(nextFormData);
+    if (!validate(nextFormData)) return;
 
     setIsLoading(true);
     setErrors({});
@@ -91,15 +111,15 @@ export default function SignUp() {
     try {
       // 1. Register on Django backend
       await registerUser({
-        full_name: formData.name,
-        email: formData.email,
-        password: formData.password,
+        full_name: nextFormData.name,
+        email: nextFormData.email,
+        password: nextFormData.password,
       });
 
       // 2. Auto sign-in via NextAuth after successful registration
       const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
+        email: nextFormData.email,
+        password: nextFormData.password,
         redirect: false,
       });
 
@@ -164,7 +184,13 @@ export default function SignUp() {
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          <form
+            action="/signup"
+            className="space-y-5"
+            method="post"
+            onSubmit={handleSubmit}
+            noValidate
+          >
 
             {/* Full Name */}
             <div>
@@ -269,8 +295,8 @@ export default function SignUp() {
             {/* Submit */}
             <div className="pt-2">
               <button
-                type="submit"
-                disabled={isLoading}
+                type={isHydrated ? "submit" : "button"}
+                disabled={!isHydrated || isLoading}
                 className="flex w-full justify-center rounded-lg bg-[#22d3ee] px-4 py-3 text-[15px] font-semibold text-white hover:bg-[#06b6d4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (

@@ -6,8 +6,13 @@ import { useSession } from 'next-auth/react';
 import { CheckCircle2, Pencil } from 'lucide-react';
 import OnboardingLayout from '../context/OnboardingLayout';
 import { OnboardingCard, CardBody, CardFooter } from '../components/OnboardingUI';
-import { useOnboarding, getStep2Route, getStep3Route } from '../context/OnboardingContext';
-import { createBusinessDetails } from '@/lib/api/onboarding';
+import {
+  OnboardingData,
+  useOnboarding,
+  getStep2Route,
+  getStep3Route,
+} from '../context/OnboardingContext';
+import { createBusinessDetails, OnboardingApiError } from '@/lib/api/onboarding';
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
   sole_trader: 'Sole Trader (Self-employed)',
@@ -15,6 +20,8 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   partnership: 'Partnership',
   llp: 'Limited Liability Partnership (LLP)',
 };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface ReviewSectionProps {
   title: string;
@@ -57,6 +64,7 @@ export default function Step6Review() {
   const { data } = useOnboarding();
   const { data: session, status } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const bt = data.businessType;
   const isSessionLoading = status === 'loading';
   const hasAccessToken = Boolean(session?.accessToken);
@@ -71,88 +79,26 @@ export default function Step6Review() {
       return;
     }
 
+    const validationIssues = validateOnboardingData(data);
+    if (validationIssues.length > 0) {
+      setSubmissionError(validationMessage(validationIssues));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setIsSubmitting(true);
+    setSubmissionError(null);
 
     try {
-      const formData = new FormData();
-      const bt = data.businessType;
-      const today = new Date().toISOString().split('T')[0];
-
-      // Base common fields
-      formData.append('primary_contact_email', data.primaryEmail || 'user@example.com');
-      formData.append('primary_phone_number', data.primaryMobile || '');
-      formData.append('is_vat_registered', String(data.vatRegistered));
-      formData.append('is_cis_registered', String(data.cisRegistered));
-      formData.append('is_paye_registered', String(data.payeRegistered));
-      formData.append('cis_role', data.cisRole ? data.cisRole.charAt(0).toUpperCase() + data.cisRole.slice(1) : 'Contractor');
-      formData.append('accounting_method', data.accountingMethod ? data.accountingMethod.charAt(0).toUpperCase() + data.accountingMethod.slice(1) : 'Cash');
-      formData.append('full_name', data.primaryName || '');
-      formData.append('email', data.primaryEmail || 'user@example.com');
-      formData.append('phone_number', data.primaryMobile || '');
-      formData.append('full_address', data.primaryAddress || '');
-      formData.append('secondary_full_name', data.secondaryName || '');
-      formData.append('secondary_email', data.secondaryEmail || 'user@example.com');
-      formData.append('secondary_phone_number', data.secondaryMobile || '');
-      formData.append('invoice_prefix', data.invoicePrefix || 'INV');
-      formData.append('quote_number_format', data.quoteFormat || 'QT-{YYYY}-{####}');
-      formData.append('invoice_number_format', data.invoiceFormat || 'INV-{YYYY}-{####}');
-      formData.append('currency', data.currency || 'GBP');
-      formData.append('tax_display', data.taxDisplay === 'inclusive' ? 'Inclusive' : 'Exclusive');
-      formData.append('default_payment_terms', String(data.paymentTermsDays || 30));
-      formData.append('user', session.user?.id ? session.user.id : '9');
-
-      // Add logo file if exists
-      if (data.logoFile) {
-        formData.append('company_logo', data.logoFile);
-      }
-
-      if (bt === 'limited_company') {
-        formData.append('usertype', 'LTD');
-        formData.append('company_name', data.lc_companyName || '');
-        formData.append('registration_number', data.lc_registrationNumber || '');
-        formData.append('date_of_incorporation', today);
-        formData.append('company_address', data.lc_registeredAddress || '');
-        formData.append('trading_address', data.lc_registeredAddress || '');
-        formData.append('directors', data.lc_directors.filter(Boolean).join(', '));
-        formData.append('corporation_tax_utr', data.lc_corpTaxUtr || '');
-      } else if (bt === 'llp') {
-        formData.append('llp_name', data.llp_name || '');
-        formData.append('registration_number', data.llp_registrationNumber || '');
-        formData.append('register_address', data.llp_registeredAddress || '');
-        formData.append('member_name', data.llp_members.filter(Boolean).join(', '));
-        formData.append('member_utr', '');
-        formData.append('trading_address', data.llp_registeredAddress || '');
-        formData.append('designated_members', data.llp_members.filter(Boolean).join(', '));
-        formData.append('corporation_tax_utr', data.llp_corpTaxUtr || '');
-      } else if (bt === 'partnership') {
-        formData.append('partnership_name', data.p_partnershipName || '');
-        formData.append('business_address', data.p_address || '');
-        formData.append('date_started', today);
-        formData.append('date_partnership_started', today);
-        formData.append('partnership_address', data.p_address || '');
-        formData.append('utr', ''); 
-        formData.append('National_insurance_number', '');
-        formData.append('industry', '');
-        formData.append('partner_name', data.p_partners.filter(p => p?.name).map(p => p.name).join(', '));
-        formData.append('partner_utr', data.p_partners.filter(p => p?.utr).map(p => p.utr).join(', '));
-        formData.append('partnership_utr', '');
-        formData.append('vat_scheme', data.vatScheme === 'standard' ? 'Standard_VAT' : 'Flat_Rate_VAT');
-      } else if (bt === 'sole_trader') {
-        formData.append('business_name', data.st_legalName || '');
-        formData.append('trading_name', data.st_tradingName || '');
-        formData.append('date_business_started', today);
-        formData.append('business_address', data.st_address || '');
-        formData.append('utr', data.st_utr || '');
-        formData.append('National_insurance_number', data.st_niNumber || '');
-        formData.append('industry', data.st_industry || '');
-        formData.append('vat_scheme', data.vatScheme === 'standard' ? 'Standard_VAT' : 'Flat_Rate_VAT');
-      }
-
-      await createBusinessDetails(bt, formData);
+      await createBusinessDetails(bt, buildBusinessDetailsFormData(data));
       router.push('/dashboard');
     } catch (error) {
-      console.error('Submission error:', error);
-      alert('Setup failed. Please try again.');
+      setSubmissionError(
+        error instanceof OnboardingApiError
+          ? error.message
+          : 'Setup failed. Please check your details and try again.'
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -204,6 +150,11 @@ export default function Step6Review() {
           description="Check everything looks right before completing setup."
         >
           <div className="space-y-3 sm:space-y-4">
+            {submissionError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {submissionError}
+              </div>
+            )}
 
             <ReviewSection
               title="Business Type"
@@ -283,4 +234,206 @@ export default function Step6Review() {
       </OnboardingCard>
     </OnboardingLayout>
   );
+}
+
+interface ValidationIssue {
+  label: string;
+  route: string;
+}
+
+function clean(value: string | undefined): string {
+  return value?.trim() ?? '';
+}
+
+function nonEmptyItems(items: string[]): string[] {
+  return items.map(clean).filter(Boolean);
+}
+
+function firstNonEmpty(...values: (string | undefined)[]): string {
+  return values.map(clean).find(Boolean) ?? '';
+}
+
+function partnerNames(data: OnboardingData): string[] {
+  return data.p_partners.map((partner) => clean(partner.name)).filter(Boolean);
+}
+
+function partnerUtrs(data: OnboardingData): string[] {
+  return data.p_partners.map((partner) => clean(partner.utr)).filter(Boolean);
+}
+
+function getBusinessContactEmail(data: OnboardingData): string {
+  if (data.businessType === 'limited_company') return clean(data.lc_email);
+  if (data.businessType === 'partnership') return clean(data.p_email);
+  if (data.businessType === 'llp') return clean(data.llp_email);
+  return '';
+}
+
+function getBusinessContactPhone(data: OnboardingData): string {
+  if (data.businessType === 'limited_company') return clean(data.lc_phone);
+  if (data.businessType === 'partnership') return clean(data.p_phone);
+  if (data.businessType === 'llp') return clean(data.llp_phone);
+  return '';
+}
+
+function getContactName(data: OnboardingData): string {
+  if (clean(data.primaryName)) return clean(data.primaryName);
+  if (data.businessType === 'sole_trader') return clean(data.st_legalName);
+  if (data.businessType === 'limited_company') return nonEmptyItems(data.lc_directors)[0] ?? '';
+  if (data.businessType === 'partnership') return partnerNames(data)[0] ?? '';
+  return nonEmptyItems(data.llp_members)[0] ?? '';
+}
+
+function getContactEmail(data: OnboardingData): string {
+  return firstNonEmpty(data.primaryEmail, getBusinessContactEmail(data));
+}
+
+function addIssue(
+  issues: ValidationIssue[],
+  condition: boolean,
+  label: string,
+  route: string
+) {
+  if (condition) issues.push({ label, route });
+}
+
+function validateOnboardingData(data: OnboardingData): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const businessRoute = getStep2Route(data.businessType);
+
+  if (data.businessType === 'sole_trader') {
+    addIssue(issues, !clean(data.st_legalName), 'Sole trader legal name', businessRoute);
+  } else if (data.businessType === 'limited_company') {
+    addIssue(issues, !clean(data.lc_companyName), 'Company name', businessRoute);
+    addIssue(issues, !clean(data.lc_registrationNumber), 'Company registration number', businessRoute);
+    addIssue(issues, !getBusinessContactEmail(data), 'Company contact email', businessRoute);
+  } else if (data.businessType === 'partnership') {
+    addIssue(issues, !clean(data.p_partnershipName), 'Partnership name', businessRoute);
+    addIssue(issues, partnerNames(data).length === 0, 'At least one partner name', businessRoute);
+  } else if (data.businessType === 'llp') {
+    addIssue(issues, !clean(data.llp_name), 'LLP name', businessRoute);
+    addIssue(issues, !clean(data.llp_registrationNumber), 'LLP registration number', businessRoute);
+    addIssue(issues, nonEmptyItems(data.llp_members).length === 0, 'At least one LLP member', businessRoute);
+    addIssue(issues, !getBusinessContactEmail(data), 'LLP contact email', businessRoute);
+  }
+
+  const contactName = getContactName(data);
+  const contactEmail = getContactEmail(data);
+
+  addIssue(issues, !contactName, 'Primary contact name', '/onboarding/step-4');
+  addIssue(issues, !contactEmail, 'Primary contact email', '/onboarding/step-4');
+  addIssue(
+    issues,
+    Boolean(contactEmail) && !EMAIL_PATTERN.test(contactEmail),
+    'Valid primary contact email',
+    '/onboarding/step-4'
+  );
+
+  return issues;
+}
+
+function appendValue(formData: FormData, key: string, value: string | number | boolean | undefined) {
+  if (typeof value === 'boolean' || typeof value === 'number') {
+    formData.append(key, String(value));
+    return;
+  }
+
+  const cleaned = clean(value);
+  if (cleaned) formData.append(key, cleaned);
+}
+
+function apiCisRole(role: OnboardingData['cisRole']): string {
+  if (role === 'both') return 'Both';
+  return role === 'contractor' ? 'Contractor' : 'Subcontractor';
+}
+
+function apiAccountingMethod(method: OnboardingData['accountingMethod']): string {
+  return method === 'cash' ? 'Cash' : 'Accrual';
+}
+
+function apiVatScheme(scheme: OnboardingData['vatScheme']): string {
+  return scheme === 'standard' ? 'Standard_VAT' : 'Flat_Rate_VAT';
+}
+
+function appendCommonFields(formData: FormData, data: OnboardingData) {
+  const contactEmail = getContactEmail(data);
+  const contactPhone = firstNonEmpty(data.primaryMobile, getBusinessContactPhone(data));
+
+  appendValue(formData, 'full_name', getContactName(data));
+  appendValue(formData, 'email', contactEmail);
+  appendValue(formData, 'phone_number', contactPhone);
+  appendValue(formData, 'full_address', data.primaryAddress);
+  appendValue(formData, 'secondary_full_name', data.secondaryName);
+  appendValue(formData, 'secondary_email', data.secondaryEmail);
+  appendValue(formData, 'secondary_phone_number', data.secondaryMobile);
+  appendValue(formData, 'is_vat_registered', data.vatRegistered);
+  appendValue(formData, 'is_cis_registered', data.cisRegistered);
+  if (data.cisRegistered) appendValue(formData, 'cis_role', apiCisRole(data.cisRole));
+  appendValue(formData, 'accounting_method', apiAccountingMethod(data.accountingMethod));
+  appendValue(formData, 'invoice_prefix', data.invoicePrefix);
+  appendValue(formData, 'quote_number_format', data.quoteFormat);
+  appendValue(formData, 'invoice_number_format', data.invoiceFormat);
+  appendValue(formData, 'currency', data.currency);
+  appendValue(formData, 'tax_display', data.taxDisplay === 'inclusive' ? 'Inclusive' : 'Exclusive');
+
+  if (data.logoFile) {
+    formData.append('company_logo', data.logoFile);
+  }
+}
+
+function appendVatSchemeForUnincorporated(formData: FormData, data: OnboardingData) {
+  if (data.vatRegistered) {
+    appendValue(formData, 'vat_scheme', apiVatScheme(data.vatScheme));
+  }
+}
+
+function appendCompanyTaxFields(formData: FormData, data: OnboardingData) {
+  appendValue(formData, 'is_paye_registered', data.payeRegistered);
+  appendValue(formData, 'primary_contact_email', firstNonEmpty(getBusinessContactEmail(data), data.primaryEmail));
+  appendValue(formData, 'primary_phone_number', firstNonEmpty(getBusinessContactPhone(data), data.primaryMobile));
+}
+
+function buildBusinessDetailsFormData(data: OnboardingData): FormData {
+  const formData = new FormData();
+  appendCommonFields(formData, data);
+
+  if (data.businessType === 'sole_trader') {
+    appendVatSchemeForUnincorporated(formData, data);
+    appendValue(formData, 'business_name', data.st_legalName);
+    appendValue(formData, 'trading_name', data.st_tradingName);
+    appendValue(formData, 'business_address', data.st_address);
+    appendValue(formData, 'utr', data.st_utr);
+    appendValue(formData, 'National_insurance_number', data.st_niNumber);
+    appendValue(formData, 'industry', data.st_industry);
+  } else if (data.businessType === 'limited_company') {
+    appendCompanyTaxFields(formData, data);
+    appendValue(formData, 'company_name', data.lc_companyName);
+    appendValue(formData, 'registration_number', data.lc_registrationNumber);
+    appendValue(formData, 'company_address', data.lc_registeredAddress);
+    appendValue(formData, 'trading_address', data.lc_registeredAddress);
+    appendValue(formData, 'directors', nonEmptyItems(data.lc_directors).join(', '));
+    appendValue(formData, 'corporation_tax_utr', data.lc_corpTaxUtr);
+  } else if (data.businessType === 'partnership') {
+    appendVatSchemeForUnincorporated(formData, data);
+    appendValue(formData, 'partnership_name', data.p_partnershipName);
+    appendValue(formData, 'business_address', data.p_address);
+    appendValue(formData, 'partnership_address', data.p_address);
+    appendValue(formData, 'partner_name', partnerNames(data).join(', '));
+    appendValue(formData, 'partner_utr', partnerUtrs(data).join(', '));
+  } else {
+    appendCompanyTaxFields(formData, data);
+    appendValue(formData, 'llp_name', data.llp_name);
+    appendValue(formData, 'registration_number', data.llp_registrationNumber);
+    appendValue(formData, 'register_address', data.llp_registeredAddress);
+    appendValue(formData, 'member_name', nonEmptyItems(data.llp_members).join(', '));
+    appendValue(formData, 'trading_address', data.llp_registeredAddress);
+    appendValue(formData, 'designated_members', nonEmptyItems(data.llp_members).join(', '));
+    appendValue(formData, 'corporation_tax_utr', data.llp_corpTaxUtr);
+  }
+
+  return formData;
+}
+
+function validationMessage(issues: ValidationIssue[]): string {
+  const labels = issues.map((issue) => issue.label).join(', ');
+  return `Please complete these required fields before submitting: ${labels}.`;
 }

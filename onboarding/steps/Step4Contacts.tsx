@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OnboardingLayout from '../context/OnboardingLayout';
 import {
@@ -9,9 +9,40 @@ import {
 } from '../components/OnboardingUI';
 import { useOnboarding, getStep3Route } from '../context/OnboardingContext';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function clean(value: string | undefined): string {
+  return value?.trim() ?? '';
+}
+
 export default function Step4Contacts() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleNext() {
+    if (!clean(data.primaryName)) {
+      setError('Primary contact full name is required.');
+      return;
+    }
+
+    if (!clean(data.primaryEmail)) {
+      setError('Primary contact email is required.');
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(clean(data.primaryEmail))) {
+      setError('Enter a valid primary contact email.');
+      return;
+    }
+
+    if (clean(data.secondaryEmail) && !EMAIL_PATTERN.test(clean(data.secondaryEmail))) {
+      setError('Enter a valid secondary contact email, or leave it blank.');
+      return;
+    }
+
+    router.push('/onboarding/step-5');
+  }
 
   return (
     <OnboardingLayout currentStep={4}>
@@ -21,9 +52,14 @@ export default function Step4Contacts() {
           description="Who should we contact about your account?"
         >
           <div className="space-y-4 sm:space-y-5">
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
 
             {/* Primary ───────────────────────────────────────────────────── */}
-            <SectionBox title="Primary Contact *">
+            <SectionBox title="Primary Contact">
               <Field
                 label="Full Name" required
                 placeholder="John Smith"
@@ -37,13 +73,13 @@ export default function Step4Contacts() {
                 onChange={e => update('primaryEmail', e.target.value)}
               />
               <Field
-                label="Mobile" required type="tel"
+                label="Mobile" type="tel"
                 placeholder="+44 7700 900000"
                 value={data.primaryMobile}
                 onChange={e => update('primaryMobile', e.target.value)}
               />
               <Field
-                label="Full Address" required
+                label="Full Address"
                 placeholder="123 High Street, London, SW1A 1AA"
                 value={data.primaryAddress}
                 onChange={e => update('primaryAddress', e.target.value)}
@@ -77,7 +113,7 @@ export default function Step4Contacts() {
         <CardFooter
           step={4}
           onPrev={() => router.push(getStep3Route(data.businessType))}
-          onNext={() => router.push('/onboarding/step-5')}
+          onNext={handleNext}
         />
       </OnboardingCard>
     </OnboardingLayout>
