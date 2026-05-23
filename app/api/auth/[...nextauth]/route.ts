@@ -1,5 +1,5 @@
 // app/api/auth/[...nextauth]/route.ts
-import { buildApiUrl } from "@/lib/api/config";
+import { buildServerApiUrl } from "@/lib/api/config";
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          const res = await fetch(buildApiUrl("/api/auth/login/"), {
+          const res = await fetch(buildServerApiUrl("/api/auth/login/"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

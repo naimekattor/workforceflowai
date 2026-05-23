@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowLeft, Save } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ArrowLeft, Check, Save } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
@@ -12,8 +12,7 @@ import {
   inviteCollaborator,
 } from "@/lib/api/collaborators";
 
-type CollaboratorInput = {
-  collaborator: string;
+type TeamMemberInput = {
   work_type: CollaboratorWorkType;
   full_name: string;
   email: string;
@@ -29,12 +28,28 @@ type CollaboratorInput = {
 const WORK_TYPE_OPTIONS: Array<{
   value: CollaboratorWorkType;
   title: string;
-  desc: string;
+  description: string;
 }> = [
-  { value: "Employee", title: "Employee", desc: "Full-time or part-time employee" },
-  { value: "Sole_Trader", title: "Sole Trader", desc: "Self-employed individual" },
-  { value: "Limited_Company", title: "Limited Company", desc: "Registered limited company" },
-  { value: "Partnership", title: "Partnership", desc: "Business partnership" },
+  {
+    value: "ST",
+    title: "Sole Trader",
+    description: "Self-employed team member or subcontractor",
+  },
+  {
+    value: "EMP",
+    title: "Employee",
+    description: "Direct employee or internal staff member",
+  },
+  {
+    value: "LC",
+    title: "Limited Company",
+    description: "Registered company or contractor business",
+  },
+  {
+    value: "PT",
+    title: "Partnership",
+    description: "Partnership or multi-person trade team",
+  },
 ];
 
 function formatApiError(error: unknown): string {
@@ -78,275 +93,334 @@ function formatApiError(error: unknown): string {
 export default function AddTeamMember() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [selectedWorkType, setSelectedWorkType] =
+    useState<CollaboratorWorkType>("ST");
+  const [submitError, setSubmitError] = useState("");
 
   const {
     register,
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<CollaboratorInput>({
+  } = useForm<TeamMemberInput>({
     defaultValues: {
-      work_type: "Employee",
-      role: "User",
+      work_type: "ST",
+      role: "Admin",
+      phone_number: "",
+      full_address: "",
+      position: "",
       vat_registered: false,
       cis_registered: false,
       additional_notes: "",
     },
   });
-  const [selectedWorkType, setSelectedWorkType] =
-    useState<CollaboratorWorkType>("Employee");
 
-  const onSubmit: SubmitHandler<CollaboratorInput> = async (data) => {
-    if (!session?.accessToken || !session.user?.id) {
-      alert("You must be logged in to add a collaborator.");
-      return;
-    }
-
-    const owner = Number(session.user.id);
-    const collaborator = Number(data.collaborator);
-
-    if (!Number.isInteger(owner) || !Number.isInteger(collaborator)) {
-      alert("Owner and collaborator must be valid user IDs.");
+  const onSubmit: SubmitHandler<TeamMemberInput> = async (data) => {
+    if (!session?.accessToken) {
+      setSubmitError("You must be logged in to add a team member.");
       return;
     }
 
     try {
+      setSubmitError("");
       await inviteCollaborator({
-        owner,
-        collaborator,
         work_type: data.work_type,
-        full_name: data.full_name,
-        email: data.email,
+        full_name: data.full_name.trim(),
+        email: data.email.trim(),
         role: data.role,
-        phone_number: data.phone_number || "",
-        full_address: data.full_address || "",
-        position: data.position || "",
+        phone_number: data.phone_number.trim(),
+        full_address: data.full_address.trim(),
+        position: data.position.trim(),
         vat_registered: data.vat_registered,
         cis_registered: data.cis_registered,
-        additional_notes: data.additional_notes || "",
+        additional_notes: data.additional_notes.trim(),
       });
 
-      alert("Collaborator added successfully!");
-      router.push("/dashboard/account-settings");
+      router.push("/dashboard/account-settings/team");
       router.refresh();
     } catch (error) {
-      console.error("Error inviting collaborator:", error);
-      alert(formatApiError(error));
+      console.error("Error adding team member:", error);
+      setSubmitError(formatApiError(error));
     }
   };
 
   const inputClassName =
-    "w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400";
+    "w-full rounded-lg border-0 bg-[#f4f6f8] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400";
 
   return (
-    <div className="max-w-3xl mx-auto pb-24">
+    <div className="mx-auto max-w-5xl pb-24">
       <div className="mb-8">
         <Link
-          href="/dashboard/account-settings"
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-4 transition-colors"
+          href="/dashboard/account-settings/team"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Back to Team
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">Add Team Member</h1>
-        <p className="text-slate-500 text-sm">Add a new team member or contractor</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="mb-1 text-2xl font-bold text-slate-900">
+              Add Team Member
+            </h1>
+            <p className="text-sm text-slate-500">
+              Create a team profile with access and registration details
+            </p>
+          </div>
+        </div>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-[15px] font-bold text-slate-900 mb-5">Basic Information</h2>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="full_name" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Full Name *
-              </label>
-              <input
-                id="full_name"
-                type="text"
-                placeholder="John Smith"
-                {...register("full_name", { required: "Full name is required" })}
-                className={inputClassName}
-              />
-              {errors.full_name && <p className="mt-1 text-xs text-red-500">{errors.full_name.message}</p>}
-            </div>
+        {submitError && (
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            {submitError}
+          </div>
+        )}
 
-            <div>
-              <label htmlFor="email" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Email *
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6">
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-[15px] font-bold text-slate-900">
+                Basic Information
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="full_name"
+                    className="mb-1.5 block text-[12px] font-bold text-slate-800"
+                  >
+                    Full Name *
+                  </label>
+                  <input
+                    id="full_name"
+                    type="text"
+                    placeholder="Md Arafat"
+                    {...register("full_name", {
+                      required: "Full name is required",
+                    })}
+                    className={inputClassName}
+                  />
+                  {errors.full_name && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.full_name.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-1.5 block text-[12px] font-bold text-slate-800"
+                  >
+                    Email *
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    {...register("email", {
+                      required: "Email is required",
+                      pattern: {
+                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                        message: "Enter a valid email address",
+                      },
+                    })}
+                    className={inputClassName}
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="phone_number"
+                    className="mb-1.5 block text-[12px] font-bold text-slate-800"
+                  >
+                    Phone Number
+                  </label>
+                  <input
+                    id="phone_number"
+                    type="tel"
+                    placeholder="+44 7700 900000"
+                    {...register("phone_number")}
+                    className={inputClassName}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="position"
+                    className="mb-1.5 block text-[12px] font-bold text-slate-800"
+                  >
+                    Position
+                  </label>
+                  <input
+                    id="position"
+                    type="text"
+                    placeholder="Admin, Electrician, Project Manager"
+                    {...register("position")}
+                    className={inputClassName}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="role"
+                    className="mb-1.5 block text-[12px] font-bold text-slate-800"
+                  >
+                    Role *
+                  </label>
+                  <select
+                    id="role"
+                    {...register("role", { required: "Role is required" })}
+                    className={`${inputClassName} appearance-none`}
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="User">User</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="full_address"
+                    className="mb-1.5 block text-[12px] font-bold text-slate-800"
+                  >
+                    Full Address
+                  </label>
+                  <input
+                    id="full_address"
+                    type="text"
+                    placeholder="123 High Street, London, SW1A 1AA"
+                    {...register("full_address")}
+                    className={inputClassName}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-[15px] font-bold text-slate-900">
+                Notes
+              </h2>
+              <label
+                htmlFor="additional_notes"
+                className="mb-1.5 block text-[12px] font-bold text-slate-800"
+              >
+                Additional Notes
               </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="john@company.com"
-                {...register("email", {
-                  required: "Email is required",
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: "Enter a valid email address",
-                  },
+              <textarea
+                id="additional_notes"
+                rows={5}
+                placeholder="Add relevant team notes..."
+                {...register("additional_notes")}
+                className="w-full resize-none rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400"
+              />
+            </section>
+          </div>
+
+          <div className="space-y-6">
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-[15px] font-bold text-slate-900">
+                Work Type
+              </h2>
+              <input type="hidden" {...register("work_type")} />
+              <div className="space-y-3">
+                {WORK_TYPE_OPTIONS.map((type) => {
+                  const selected = selectedWorkType === type.value;
+
+                  return (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedWorkType(type.value);
+                        setValue("work_type", type.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                      className={`flex w-full items-start justify-between gap-3 rounded-lg border p-4 text-left transition-colors ${
+                        selected
+                          ? "border-[#22d3ee] bg-[#f0fdfa]"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <span>
+                        <span className="mb-0.5 block text-[13px] font-bold text-slate-900">
+                          {type.title}
+                        </span>
+                        <span className="block text-[12px] text-slate-500">
+                          {type.description}
+                        </span>
+                      </span>
+                      {selected && (
+                        <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#22d3ee] text-white">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </button>
+                  );
                 })}
-                className={inputClassName}
-              />
-              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-            </div>
+              </div>
+            </section>
 
-            <div>
-              <label htmlFor="collaborator" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Collaborator User ID *
-              </label>
-              <input
-                id="collaborator"
-                type="number"
-                placeholder="User ID of the collaborator"
-                {...register("collaborator", { required: "Collaborator user ID is required" })}
-                className={inputClassName}
-              />
-              {errors.collaborator && <p className="mt-1 text-xs text-red-500">{errors.collaborator.message}</p>}
-            </div>
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-[15px] font-bold text-slate-900">
+                Tax Registration
+              </h2>
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300">
+                  <input
+                    type="checkbox"
+                    {...register("vat_registered")}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#22d3ee] focus:ring-[#22d3ee]"
+                  />
+                  <span>
+                    <span className="mb-0.5 block text-[13px] font-bold text-slate-900">
+                      VAT Registered
+                    </span>
+                    <span className="block text-[12px] text-slate-500">
+                      Registered for VAT
+                    </span>
+                  </span>
+                </label>
 
-            <div>
-              <label htmlFor="role" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Access Role
-              </label>
-              <select
-                id="role"
-                {...register("role")}
-                className={`${inputClassName} appearance-none`}
-              >
-                <option value="User">User</option>
-                <option value="Admin">Admin</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="phone_number" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Mobile Number
-              </label>
-              <input
-                id="phone_number"
-                type="tel"
-                placeholder="+44 7700 900000"
-                {...register("phone_number")}
-                className={inputClassName}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="full_address" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Full Address
-              </label>
-              <input
-                id="full_address"
-                type="text"
-                placeholder="123 High Street, London, SW1A 1AA"
-                {...register("full_address")}
-                className={inputClassName}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="position" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-                Position
-              </label>
-              <input
-                id="position"
-                type="text"
-                placeholder="e.g., Project Manager, Electrician, Plumber"
-                {...register("position")}
-                className={inputClassName}
-              />
-            </div>
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300">
+                  <input
+                    type="checkbox"
+                    {...register("cis_registered")}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#22d3ee] focus:ring-[#22d3ee]"
+                  />
+                  <span>
+                    <span className="mb-0.5 block text-[13px] font-bold text-slate-900">
+                      CIS Registered
+                    </span>
+                    <span className="block text-[12px] text-slate-500">
+                      Registered for CIS
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-[15px] font-bold text-slate-900 mb-5">Worker Type</h2>
-          <input type="hidden" {...register("work_type")} />
-          <div className="space-y-3">
-            {WORK_TYPE_OPTIONS.map((type) => (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => {
-                  setSelectedWorkType(type.value);
-                  setValue("work_type", type.value, { shouldDirty: true });
-                }}
-                className={`w-full flex flex-col items-start p-4 rounded-lg border text-left transition-colors ${
-                  selectedWorkType === type.value
-                    ? "border-[#22d3ee] bg-[#f0fdfa]"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
-              >
-                <span className="text-[13px] font-bold text-slate-900 mb-0.5">{type.title}</span>
-                <span className="text-[12px] text-slate-500">{type.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-[15px] font-bold text-slate-900 mb-5">Tax & Registration</h2>
-          <div className="space-y-3">
-            <label className="flex items-start gap-3 p-4 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-slate-300 transition-colors">
-              <div className="flex items-center h-5">
-                <input
-                  type="checkbox"
-                  {...register("vat_registered")}
-                  className="w-4 h-4 rounded border-slate-300 text-[#22d3ee] focus:ring-[#22d3ee]"
-                />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-slate-900 mb-0.5">VAT Registered</p>
-                <p className="text-[12px] text-slate-500">This person/company is registered for VAT</p>
-              </div>
-            </label>
-
-            <label className="flex items-start gap-3 p-4 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-slate-300 transition-colors">
-              <div className="flex items-center h-5">
-                <input
-                  type="checkbox"
-                  {...register("cis_registered")}
-                  className="w-4 h-4 rounded border-slate-300 text-[#22d3ee] focus:ring-[#22d3ee]"
-                />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-slate-900 mb-0.5">CIS Registered</p>
-                <p className="text-[12px] text-slate-500">Registered under the Construction Industry Scheme</p>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-[15px] font-bold text-slate-900 mb-5">Additional Notes</h2>
-          <div>
-            <label htmlFor="additional_notes" className="block text-[12px] font-bold text-slate-800 mb-1.5">
-              Notes (Optional)
-            </label>
-            <textarea
-              id="additional_notes"
-              rows={4}
-              placeholder="Any additional information about this team member..."
-              {...register("additional_notes")}
-              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400 resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-4">
+        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={() => router.push("/dashboard/account-settings")}
-            className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-bold transition-colors shadow-sm"
+            onClick={() => router.push("/dashboard/account-settings/team")}
+            className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || status === "loading"}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#22d3ee] hover:bg-[#06b6d4] text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:bg-slate-300"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#22d3ee] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#06b6d4] disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            <Save className="w-4 h-4" />
+            <Save className="h-4 w-4" />
             {isSubmitting ? "Adding..." : "Add Team Member"}
           </button>
         </div>

@@ -2,14 +2,17 @@ import apiClient from "./axios";
 
 export type CollaboratorRole = "Admin" | "User";
 export type CollaboratorWorkType =
+  | "ST"
+  | "EMP"
+  | "LC"
+  | "PT"
+  | "LLP"
   | "Employee"
   | "Sole_Trader"
   | "Limited_Company"
   | "Partnership";
 
 export interface CollaboratorInvitePayload {
-  owner: number;
-  collaborator: number;
   work_type: CollaboratorWorkType;
   full_name: string;
   email: string;
@@ -22,12 +25,15 @@ export interface CollaboratorInvitePayload {
   additional_notes: string;
 }
 
-export type CollaboratorUpdatePayload = Partial<CollaboratorInvitePayload>;
+export type CollaboratorUpdatePayload = Partial<CollaboratorInvitePayload> & {
+  owner?: number;
+  collaborator?: number;
+};
 
 export interface Collaborator {
   id: number;
-  owner: number;
-  collaborator: number;
+  owner?: number;
+  collaborator?: number;
   work_type: CollaboratorWorkType | string;
   full_name: string;
   email: string;

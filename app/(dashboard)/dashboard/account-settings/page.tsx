@@ -18,7 +18,16 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { getUserProfile, getBusinessDetails, updateBusinessDetails, BusinessDetails, UserProfile } from '@/lib/api/business';
+import {
+  getUserProfile,
+  getBusinessDetails,
+  updateBusinessDetails,
+  getBusinessTypeKey,
+  getBusinessTypeLabel,
+  BusinessDetails,
+  BusinessTypeKey,
+  UserProfile,
+} from '@/lib/api/business';
 import CollaboratorList from '@/components/dashboard/CollaboratorList';
 import { BillingInfo, getBillingHistory } from '@/lib/api/billing';
 import { NotificationSettings, getNotificationSettings, updateNotificationSettings } from '@/lib/api/notifications';
@@ -40,6 +49,19 @@ type BusinessToggleField =
   | 'is_cis_registered'
   | 'is_paye_registered';
 
+const plans: Plan[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    subtitle: 'For growing trade teams',
+    price: '£29',
+    customers: 'Up to 500',
+    quotes: 'Unlimited',
+    teamMembers: 'Up to 5',
+    features: [],
+  },
+];
+
 const notificationRows = [
   {
     key: 'quote_accept',
@@ -59,6 +81,246 @@ const notificationRows = [
 ] as const;
 
 type NotificationSettingKey = typeof notificationRows[number]['key'];
+
+type BusinessField = {
+  name: keyof BusinessDetails;
+  label: string;
+  type?: 'text' | 'email' | 'tel' | 'date' | 'number' | 'textarea' | 'select';
+  placeholder?: string;
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+};
+
+const inputClassName =
+  'w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400';
+
+const selectClassName = `${inputClassName} appearance-none`;
+
+const businessDetailFields: Record<BusinessTypeKey, BusinessField[]> = {
+  sole_trade: [
+    { name: 'business_name', label: 'Business Name', required: true },
+    { name: 'trading_name', label: 'Trading Name' },
+    { name: 'date_business_started', label: 'Date Business Started', type: 'date' },
+    { name: 'business_address', label: 'Business Address', type: 'textarea' },
+    { name: 'utr', label: 'UTR' },
+    { name: 'National_insurance_number', label: 'National Insurance Number' },
+    { name: 'industry', label: 'Industry' },
+  ],
+  limited_company: [
+    { name: 'company_name', label: 'Company Name', required: true },
+    { name: 'registration_number', label: 'Registration Number', required: true },
+    { name: 'date_of_incorporation', label: 'Date of Incorporation', type: 'date' },
+    { name: 'company_address', label: 'Company Address', type: 'textarea' },
+    { name: 'trading_address', label: 'Trading Address', type: 'textarea' },
+    { name: 'directors', label: 'Directors', type: 'textarea' },
+    { name: 'primary_contact_email', label: 'Primary Contact Email', type: 'email', required: true },
+    { name: 'primary_phone_number', label: 'Primary Phone Number', type: 'tel' },
+    { name: 'corporation_tax_utr', label: 'Corporation Tax UTR' },
+  ],
+  partnership: [
+    { name: 'partnership_name', label: 'Partnership Name', required: true },
+    { name: 'business_address', label: 'Business Address', type: 'textarea' },
+    { name: 'date_started', label: 'Date Started', type: 'date' },
+    { name: 'date_partnership_started', label: 'Date Partnership Started', type: 'date' },
+    { name: 'partnership_address', label: 'Partnership Address', type: 'textarea' },
+    { name: 'utr', label: 'UTR' },
+    { name: 'National_insurance_number', label: 'National Insurance Number' },
+    { name: 'industry', label: 'Industry' },
+    { name: 'partner_name', label: 'Partner Name', required: true },
+    { name: 'partner_utr', label: 'Partner UTR' },
+    { name: 'partnership_utr', label: 'Partnership UTR' },
+  ],
+  llp: [
+    { name: 'llp_name', label: 'LLP Name', required: true },
+    { name: 'registration_number', label: 'Registration Number', required: true },
+    { name: 'register_address', label: 'Registered Address', type: 'textarea' },
+    { name: 'member_name', label: 'Member Name', required: true },
+    { name: 'member_utr', label: 'Member UTR' },
+    { name: 'trading_address', label: 'Trading Address', type: 'textarea' },
+    { name: 'designated_members', label: 'Designated Members', type: 'textarea' },
+    { name: 'primary_contact_email', label: 'Primary Contact Email', type: 'email', required: true },
+    { name: 'primary_phone_number', label: 'Primary Phone Number', type: 'tel' },
+    { name: 'corporation_tax_utr', label: 'Corporation Tax UTR' },
+  ],
+};
+
+const contactFields: BusinessField[] = [
+  { name: 'full_name', label: 'Full Name', required: true },
+  { name: 'email', label: 'Email', type: 'email', required: true },
+  { name: 'phone_number', label: 'Phone Number', type: 'tel' },
+  { name: 'full_address', label: 'Full Address', type: 'textarea' },
+];
+
+const secondaryContactFields: BusinessField[] = [
+  { name: 'secondary_full_name', label: 'Full Name' },
+  { name: 'secondary_email', label: 'Email', type: 'email' },
+  { name: 'secondary_phone_number', label: 'Mobile', type: 'tel' },
+];
+
+const preferenceFields: BusinessField[] = [
+  { name: 'invoice_prefix', label: 'Invoice Prefix' },
+  { name: 'quote_number_format', label: 'Quote Number Format' },
+  { name: 'invoice_number_format', label: 'Invoice Number Format' },
+  {
+    name: 'currency',
+    label: 'Currency',
+    type: 'select',
+    options: [
+      { value: 'GBP', label: 'GBP - British Pound' },
+      { value: 'USD', label: 'USD - US Dollar' },
+      { value: 'EUR', label: 'EUR - Euro' },
+      { value: 'CAD', label: 'CAD - Canadian Dollar' },
+      { value: 'AUD', label: 'AUD - Australian Dollar' },
+    ],
+  },
+  {
+    name: 'tax_display',
+    label: 'Tax Display',
+    type: 'select',
+    options: [
+      { value: 'Exclusive', label: 'Exclusive' },
+      { value: 'Inclusive', label: 'Inclusive' },
+    ],
+  },
+  { name: 'default_payment_terms', label: 'Default Payment Terms', type: 'number' },
+];
+
+const vatSchemeOptions = [
+  { value: 'Standard_VAT', label: 'Standard VAT' },
+  { value: 'Flat_Rate_VAT', label: 'Flat Rate VAT' },
+  { value: 'Flat_Rate_Scheme', label: 'Flat Rate Scheme' },
+];
+
+const cisRoleOptions = [
+  { value: 'Contractor', label: 'Contractor' },
+  { value: 'Subcontractor', label: 'Subcontractor' },
+  { value: 'Both', label: 'Both' },
+];
+
+const accountingMethodOptions = [
+  { value: 'Cash', label: 'Cash' },
+  { value: 'Accrual', label: 'Accrual' },
+];
+
+const readOnlyBusinessFields = new Set([
+  'id',
+  'user',
+  'owner',
+  'usertype',
+  'company_logo',
+  'created_at',
+  'updated_at',
+]);
+
+function getFieldValue(business: BusinessDetails | null, field: keyof BusinessDetails) {
+  const value = business?.[field];
+  return value === null || value === undefined ? '' : String(value);
+}
+
+function buildBusinessPayload(business: BusinessDetails): Partial<BusinessDetails> {
+  const payload: Record<string, string | number | boolean | null | undefined> = {};
+
+  Object.entries(business).forEach(([key, value]) => {
+    if (!readOnlyBusinessFields.has(key)) {
+      payload[key] = value as string | number | boolean | null | undefined;
+    }
+  });
+
+  return payload as Partial<BusinessDetails>;
+}
+
+function BusinessFieldInput({
+  field,
+  business,
+  onChange,
+}: {
+  field: BusinessField;
+  business: BusinessDetails | null;
+  onChange: (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void;
+}) {
+  const id = String(field.name);
+  const label = `${field.label}${field.required ? ' *' : ''}`;
+  const value = getFieldValue(business, field.name);
+
+  return (
+    <div className={field.type === 'textarea' ? 'md:col-span-2' : undefined}>
+      <label
+        htmlFor={id}
+        className="block text-[12px] font-bold text-slate-800 mb-1.5"
+      >
+        {label}
+      </label>
+      {field.type === 'textarea' ? (
+        <textarea
+          id={id}
+          name={id}
+          rows={3}
+          value={value}
+          onChange={onChange}
+          placeholder={field.placeholder}
+          className={`${inputClassName} resize-none`}
+        />
+      ) : field.type === 'select' ? (
+        <select
+          id={id}
+          name={id}
+          value={value}
+          onChange={onChange}
+          className={selectClassName}
+        >
+          <option value="">Select {field.label}</option>
+          {field.options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={id}
+          name={id}
+          type={field.type || 'text'}
+          value={value}
+          onChange={onChange}
+          placeholder={field.placeholder}
+          className={inputClassName}
+        />
+      )}
+    </div>
+  );
+}
+
+function BusinessFieldSection({
+  title,
+  fields,
+  business,
+  onChange,
+}: {
+  title: string;
+  fields: BusinessField[];
+  business: BusinessDetails | null;
+  onChange: (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <h2 className="text-[15px] font-bold text-slate-900 mb-5">{title}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {fields.map((field) => (
+          <BusinessFieldInput
+            key={String(field.name)}
+            field={field}
+            business={business}
+            onChange={onChange}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ToggleSwitch({
   checked,
@@ -154,55 +416,10 @@ export default function AccountSettings() {
     useState('');
 
   const [currentPlanId] = useState('starter');
+  const currentPlan = plans.find((plan) => plan.id === currentPlanId) || plans[0];
   const [timezone, setTimezone] = useState('Europe/London');
   const [dateFormat, setDateFormat] = useState('');
   const [currency, setCurrency] = useState('GBP');
-
-  const plans: Plan[] = [
-    {
-      id: 'free',
-      name: 'Free',
-      subtitle: 'Best for testing',
-      price: '£0',
-      customers: 'Up to 10',
-      quotes: '5 quotes per month',
-      teamMembers: '1 team member',
-      features: ['Up to 10 customers', '5 quotes per month', 'Basic Invoicing', 'Email support'],
-    },
-    {
-      id: 'starter',
-      name: 'Starter',
-      subtitle: 'Best for solo professionals',
-      price: '£29',
-      customers: 'Up to 50',
-      quotes: 'Unlimited quotes',
-      teamMembers: '1 team member',
-      features: ['Up to 50 customers', 'Unlimited quotes', 'Payment collection', 'Basic job management', '1 team member'],
-    },
-    {
-      id: 'professional',
-      name: 'Professional',
-      subtitle: 'Best for growing businesses',
-      price: '£79',
-      customers: 'Up to 500',
-      quotes: 'Unlimited quotes & invoices',
-      teamMembers: 'Up to 5',
-      features: ['Up to 500 customers', 'Unlimited quotes & invoices', 'Payment collection', 'Advanced job management', 'Up to 5 team members', 'Activity tracking', 'Custom branding'],
-      popular: true,
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      subtitle: 'Best for established businesses',
-      price: '£149',
-      customers: 'Unlimited customers',
-      quotes: 'Unlimited everything',
-      teamMembers: 'Unlimited',
-      features: ['Unlimited customers', 'Unlimited everything', 'Advanced features', 'Unlimited team members', 'API access', 'Dedicated support', 'Custom integrations'],
-    },
-  ];
-
-  const currentPlan = plans.find((plan) => plan.id === currentPlanId) || plans[1];
 
   const fetchData = async () => {
     try {
@@ -332,7 +549,11 @@ export default function AccountSettings() {
 
     try {
       setIsSaving(true);
-      await updateBusinessDetails(profile.usertype, business.id, business);
+      const updatedBusiness = await updateBusinessDetails(
+        profile.usertype,
+        buildBusinessPayload(business)
+      );
+      setBusiness(updatedBusiness);
       alert('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -365,6 +586,14 @@ export default function AccountSettings() {
       };
     });
   };
+
+  const businessTypeKey = getBusinessTypeKey(profile?.usertype || business?.usertype);
+  const businessTypeLabel = getBusinessTypeLabel(profile?.usertype || business?.usertype);
+  const supportsVatScheme =
+    businessTypeKey === 'sole_trade' || businessTypeKey === 'partnership';
+  const supportsPaye =
+    businessTypeKey === 'limited_company' || businessTypeKey === 'llp';
+  const showLegacyBusinessSettings = false;
 
   if (loading) {
     return <div className="max-w-5xl mx-auto py-12 text-center text-slate-500">Loading settings...</div>;
@@ -399,7 +628,7 @@ export default function AccountSettings() {
         ) : (
           <button className="flex items-center gap-2 bg-[#e0f2fe] text-[#0284c7] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#bae6fd] transition-colors">
             <Crown className="w-4 h-4" />
-            {currentPlan.name}
+            {/* {currentPlan.name} */}
           </button>
         )}
       </div>
@@ -464,6 +693,60 @@ export default function AccountSettings() {
       </div>
 
       {activeTab === 'profile' && (
+        <div className="space-y-6">
+          {!business ? (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center text-sm text-slate-500">
+              No business details found for {businessTypeLabel}.
+            </div>
+          ) : (
+            <>
+              <BusinessFieldSection
+                title={`${businessTypeLabel} Details`}
+                fields={businessDetailFields[businessTypeKey]}
+                business={business}
+                onChange={handleInputChange}
+              />
+
+              <BusinessFieldSection
+                title="Primary Contact"
+                fields={contactFields}
+                business={business}
+                onChange={handleInputChange}
+              />
+
+              <BusinessFieldSection
+                title="Secondary Contact"
+                fields={secondaryContactFields}
+                business={business}
+                onChange={handleInputChange}
+              />
+
+              <BusinessFieldSection
+                title="Preferences & Branding"
+                fields={preferenceFields}
+                business={business}
+                onChange={handleInputChange}
+              />
+
+              {business.company_logo && (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                  <h2 className="text-[15px] font-bold text-slate-900 mb-3">Company Logo</h2>
+                  <a
+                    href={business.company_logo}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium text-[#22d3ee] hover:text-[#06b6d4]"
+                  >
+                    View current logo
+                  </a>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {showLegacyBusinessSettings && activeTab === 'profile' && (
         <div className="space-y-6">
           {/* Business Details */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
@@ -633,6 +916,127 @@ export default function AccountSettings() {
       )}
 
       {activeTab === 'tax' && (
+        <div className="space-y-6">
+          {!business ? (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center text-sm text-slate-500">
+              No tax details found for {businessTypeLabel}.
+            </div>
+          ) : (
+            <>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  <h2 className="text-[15px] font-bold text-slate-900">VAT Registration</h2>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-lg">
+                    <div>
+                      <p className="text-[13px] font-bold text-slate-900">VAT Registered</p>
+                      <p className="text-[12px] text-slate-500">Is this business registered for VAT?</p>
+                    </div>
+                    <ToggleSwitch
+                      checked={Boolean(business.is_vat_registered)}
+                      disabled={isSaving}
+                      label="VAT registered"
+                      onChange={(checked) =>
+                        handleBusinessToggle('is_vat_registered', checked)
+                      }
+                    />
+                  </div>
+
+                  {business.is_vat_registered && supportsVatScheme && (
+                    <BusinessFieldInput
+                      field={{
+                        name: 'vat_scheme',
+                        label: 'VAT Scheme',
+                        type: 'select',
+                        options: vatSchemeOptions,
+                      }}
+                      business={business}
+                      onChange={handleInputChange}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  <h2 className="text-[15px] font-bold text-slate-900">CIS Registration</h2>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-lg">
+                    <div>
+                      <p className="text-[13px] font-bold text-slate-900">CIS Registered</p>
+                      <p className="text-[12px] text-slate-500">Registered under the Construction Industry Scheme</p>
+                    </div>
+                    <ToggleSwitch
+                      checked={Boolean(business.is_cis_registered)}
+                      disabled={isSaving}
+                      label="CIS registered"
+                      onChange={(checked) =>
+                        handleBusinessToggle('is_cis_registered', checked)
+                      }
+                    />
+                  </div>
+
+                  {business.is_cis_registered && (
+                    <BusinessFieldInput
+                      field={{
+                        name: 'cis_role',
+                        label: 'CIS Role',
+                        type: 'select',
+                        options: cisRoleOptions,
+                      }}
+                      business={business}
+                      onChange={handleInputChange}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {supportsPaye && (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Users className="w-5 h-5 text-purple-500" />
+                    <h2 className="text-[15px] font-bold text-slate-900">PAYE Registration</h2>
+                  </div>
+                  <div className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-lg">
+                    <div>
+                      <p className="text-[13px] font-bold text-slate-900">PAYE Registered</p>
+                      <p className="text-[12px] text-slate-500">Does this business operate PAYE for employees?</p>
+                    </div>
+                    <ToggleSwitch
+                      checked={Boolean(business.is_paye_registered)}
+                      disabled={isSaving}
+                      label="PAYE registered"
+                      onChange={(checked) =>
+                        handleBusinessToggle('is_paye_registered', checked)
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                <h2 className="text-[15px] font-bold text-slate-900 mb-5">Accounting</h2>
+                <BusinessFieldInput
+                  field={{
+                    name: 'accounting_method',
+                    label: 'Accounting Method',
+                    type: 'select',
+                    options: accountingMethodOptions,
+                  }}
+                  business={business}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {showLegacyBusinessSettings && activeTab === 'tax' && (
         <div className="space-y-6">
           {/* VAT Registration */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">

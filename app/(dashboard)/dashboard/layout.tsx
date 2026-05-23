@@ -18,6 +18,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import Image from 'next/image';
+import { NotificationBell } from '@/components/dashboard/NotificationBell';
 
 export default function DashboardLayout({
   children,
@@ -43,6 +44,7 @@ export default function DashboardLayout({
   const { data: session } = useSession();
   const user = session?.user;
   const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+  const showNotificationBell = pathname !== '/dashboard/activity';
 
   const handleLogout = async () => {
     if (isSigningOut) return;
@@ -174,6 +176,11 @@ export default function DashboardLayout({
 
       {/* Content */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 mt-16 lg:mt-0 lg:ml-64">
+        {showNotificationBell && (
+          <div className="mb-4 flex justify-end">
+            <NotificationBell />
+          </div>
+        )}
         {children}
       </main>
     </div>

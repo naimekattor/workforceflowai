@@ -1,4 +1,4 @@
-import { buildApiUrl } from "@/lib/api/config";
+import { buildServerApiUrl } from "@/lib/api/config";
 import { encode } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,6 +19,20 @@ interface LoginResponse {
   };
   access: string;
   refresh: string;
+}
+
+function isLoginResponse(value: unknown): value is LoginResponse {
+  if (!value || typeof value !== "object") return false;
+
+  const data = value as Partial<LoginResponse>;
+  return (
+    typeof data.access === "string" &&
+    typeof data.refresh === "string" &&
+    typeof data.user === "object" &&
+    data.user !== null &&
+    "id" in data.user &&
+    typeof data.user.email === "string"
+  );
 }
 
 function safeCallbackUrl(value: FormDataEntryValue | null): string {
@@ -107,47 +121,60 @@ function setSessionCookie(
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSameOriginRequest(request)) {
-    return redirectToLogin(request, "OriginMismatch");
+  try {
+    if (!isSameOriginRequest(request)) {
+      return redirectToLogin(request, "OriginMismatch");
+    }
+
+    const formData = await request.formData();
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    if (typeof email !== "string" || typeof password !== "string") {
+      return redirectToLogin(request, "CredentialsSignin");
+    }
+
+    const loginResponse = await fetch(buildServerApiUrl("/api/auth/login/"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!loginResponse.ok) {
+      return redirectToLogin(request, "CredentialsSignin");
+    }
+
+    const data = (await loginResponse.json()) as unknown;
+    if (!isLoginResponse(data)) {
+      return redirectToLogin(request, "LoginResponse");
+    }
+
+    const token = await encode({
+      maxAge: SESSION_MAX_AGE,
+      secret: AUTH_SECRET,
+      token: {
+        id: String(data.user.id),
+        name: data.user.full_name || data.user.email,
+        email: data.user.email,
+        role: data.user.role,
+        accessToken: data.access,
+        refreshToken: data.refresh,
+      },
+    });
+
+    const redirectUrl = new URL(
+      safeCallbackUrl(formData.get("callbackUrl")),
+      requestOrigin(request)
+    );
+    const response = NextResponse.redirect(redirectUrl, { status: 303 });
+    setSessionCookie(response, request, token);
+    return response;
+  } catch (error) {
+    console.error("Fallback login failed:", error);
+    return redirectToLogin(request, "BackendUnavailable");
   }
+}
 
-  const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
-
-  if (typeof email !== "string" || typeof password !== "string") {
-    return redirectToLogin(request, "CredentialsSignin");
-  }
-
-  const loginResponse = await fetch(buildApiUrl("/api/auth/login/"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!loginResponse.ok) {
-    return redirectToLogin(request, "CredentialsSignin");
-  }
-
-  const data = (await loginResponse.json()) as LoginResponse;
-  const token = await encode({
-    maxAge: SESSION_MAX_AGE,
-    secret: AUTH_SECRET,
-    token: {
-      id: String(data.user.id),
-      name: data.user.full_name,
-      email: data.user.email,
-      role: data.user.role,
-      accessToken: data.access,
-      refreshToken: data.refresh,
-    },
-  });
-
-  const redirectUrl = new URL(
-    safeCallbackUrl(formData.get("callbackUrl")),
-    requestOrigin(request)
-  );
-  const response = NextResponse.redirect(redirectUrl, { status: 303 });
-  setSessionCookie(response, request, token);
-  return response;
+export function GET(request: NextRequest) {
+  return redirectToLogin(request, "MethodNotAllowed");
 }

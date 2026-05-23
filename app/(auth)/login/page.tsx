@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 
 interface FormData {
@@ -32,6 +32,26 @@ function getStringFormValue(formData: globalThis.FormData, key: string): string 
   return typeof value === "string" ? value : "";
 }
 
+function getLoginErrorMessage(error: string | null): string {
+  if (error === "BackendUnavailable") {
+    return "Login service is unavailable. Please try again shortly.";
+  }
+
+  if (error === "OriginMismatch") {
+    return "Login request came from the wrong domain. Please refresh and try again.";
+  }
+
+  if (error === "LoginResponse") {
+    return "Login service returned an unexpected response.";
+  }
+
+  if (error) {
+    return "Invalid email or password. Please try again.";
+  }
+
+  return "";
+}
+
 export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +60,16 @@ export default function SignIn() {
     password: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    const message = getLoginErrorMessage(
+      new URLSearchParams(window.location.search).get("error")
+    );
+
+    if (message) {
+      setErrors({ general: message });
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

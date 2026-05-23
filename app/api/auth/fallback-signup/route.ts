@@ -1,4 +1,4 @@
-import { buildApiUrl } from "@/lib/api/config";
+import { buildServerApiUrl } from "@/lib/api/config";
 import { encode } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -107,56 +107,68 @@ function setSessionCookie(
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSameOriginRequest(request)) {
-    return redirectToSignup(request, "OriginMismatch");
+  try {
+    if (!isSameOriginRequest(request)) {
+      return redirectToSignup(request, "OriginMismatch");
+    }
+
+    const formData = await request.formData();
+    const fullName = formString(formData, "name");
+    const email = formString(formData, "email");
+    const password = formString(formData, "password");
+    const confirmPassword = formString(formData, "confirmPassword");
+
+    if (!fullName || !EMAIL_PATTERN.test(email) || password.length < 8) {
+      return redirectToSignup(request, "Validation");
+    }
+
+    if (password !== confirmPassword) {
+      return redirectToSignup(request, "PasswordMismatch");
+    }
+
+    const registerResponse = await fetch(
+      buildServerApiUrl("/api/auth/register/"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          password,
+        }),
+      }
+    );
+
+    if (!registerResponse.ok) {
+      return redirectToSignup(request, "Register");
+    }
+
+    const data = (await registerResponse.json()) as RegisterResponse;
+    const token = await encode({
+      maxAge: SESSION_MAX_AGE,
+      secret: AUTH_SECRET,
+      token: {
+        id: String(data.user.id),
+        name: data.user.full_name,
+        email: data.user.email,
+        role: data.user.role,
+        accessToken: data.access,
+        refreshToken: data.refresh,
+      },
+    });
+
+    const response = NextResponse.redirect(
+      new URL("/onboarding", requestOrigin(request)),
+      { status: 303 }
+    );
+    setSessionCookie(response, request, token);
+    return response;
+  } catch (error) {
+    console.error("Fallback signup failed:", error);
+    return redirectToSignup(request, "BackendUnavailable");
   }
+}
 
-  const formData = await request.formData();
-  const fullName = formString(formData, "name");
-  const email = formString(formData, "email");
-  const password = formString(formData, "password");
-  const confirmPassword = formString(formData, "confirmPassword");
-
-  if (!fullName || !EMAIL_PATTERN.test(email) || password.length < 8) {
-    return redirectToSignup(request, "Validation");
-  }
-
-  if (password !== confirmPassword) {
-    return redirectToSignup(request, "PasswordMismatch");
-  }
-
-  const registerResponse = await fetch(buildApiUrl("/api/auth/register/"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      full_name: fullName,
-      email,
-      password,
-    }),
-  });
-
-  if (!registerResponse.ok) {
-    return redirectToSignup(request, "Register");
-  }
-
-  const data = (await registerResponse.json()) as RegisterResponse;
-  const token = await encode({
-    maxAge: SESSION_MAX_AGE,
-    secret: AUTH_SECRET,
-    token: {
-      id: String(data.user.id),
-      name: data.user.full_name,
-      email: data.user.email,
-      role: data.user.role,
-      accessToken: data.access,
-      refreshToken: data.refresh,
-    },
-  });
-
-  const response = NextResponse.redirect(
-    new URL("/onboarding", requestOrigin(request)),
-    { status: 303 }
-  );
-  setSessionCookie(response, request, token);
-  return response;
+export function GET(request: NextRequest) {
+  return redirectToSignup(request, "MethodNotAllowed");
 }
