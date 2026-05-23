@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 
 interface FormData {
@@ -34,17 +34,12 @@ function getStringFormValue(formData: globalThis.FormData, key: string): string 
 
 export default function SignIn() {
   const router = useRouter();
-  const [isHydrated, setIsHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -228,8 +223,8 @@ export default function SignIn() {
             {/* Submit */}
             <div className="pt-2">
               <button
-                type={isHydrated ? "submit" : "button"}
-                disabled={!isHydrated || isLoading}
+                type="submit"
+                disabled={isLoading}
                 className="flex w-full justify-center rounded-lg bg-[#22d3ee] px-4 py-3 text-[15px] font-semibold text-white hover:bg-[#06b6d4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
