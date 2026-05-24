@@ -3,7 +3,7 @@ set -e
 
 echo "Starting Production Server..."
 
-export PORT=3000
 export HOSTNAME=0.0.0.0
+export PORT=3000
 
-exec npx next start
+exec node .next/standalone/server.js

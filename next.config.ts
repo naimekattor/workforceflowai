@@ -41,7 +41,6 @@ function allowedDevOrigins(): string[] | undefined {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: allowedDevOrigins(),
-  distDir: "dist",
   output: "standalone",
 };
 

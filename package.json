@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && mkdir -p dist/standalone/dist && cp -r dist/static dist/standalone/dist/ 2>/dev/null || true && cp -r dist/server dist/standalone/dist/ 2>/dev/null || true",
-    "start": "next start",
+    "build": "next build && node scripts/prepare-standalone.mjs",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint"
   },
   "dependencies": {
