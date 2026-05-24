@@ -1,7 +1,7 @@
-const DEFAULT_API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ;
+const DEFAULT_API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
 
 export function getApiBaseUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
   return apiUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
@@ -10,7 +10,8 @@ export function getServerApiBaseUrl(): string {
     process.env.BACKEND_API_URL ||
     process.env.API_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
-    DEFAULT_API_BASE_URL;
+    DEFAULT_API_BASE_URL ||
+    "";
 
   return apiUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
 }
