@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://10.10.13.75:8500";
+const DEFAULT_API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ;
 
 export function getApiBaseUrl(): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL;
