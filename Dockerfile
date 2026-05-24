@@ -2,7 +2,7 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-ARG NEXT_PUBLIC_BASE_URL=https://api.revboost.net/api
+ARG NEXT_PUBLIC_BASE_URL=https://api.revboostai.net/api
 ARG NEXT_PUBLIC_WS_URL
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
@@ -18,7 +18,7 @@ FROM node:20-slim AS runner
 
 WORKDIR /app
 
-ARG NEXT_PUBLIC_BASE_URL=https://api.revboost.net/api
+ARG NEXT_PUBLIC_BASE_URL=https://api.revboostai.net/api
 ARG NEXT_PUBLIC_WS_URL
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
