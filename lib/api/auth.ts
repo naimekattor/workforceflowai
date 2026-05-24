@@ -1,5 +1,6 @@
 // lib/api/auth.ts
 import axios from "axios";
+import apiClient from "./axios";
 
 export interface RegisterPayload {
   full_name: string;
@@ -60,7 +61,7 @@ export async function registerUser(
   payload: RegisterPayload
 ): Promise<RegisterResponse> {
   try {
-    const response = await axios.post<RegisterResponse>(
+    const response = await apiClient.post<RegisterResponse>(
       "/api/auth/register/",
       payload
     );
