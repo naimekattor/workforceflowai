@@ -6,8 +6,8 @@ type PublicQuoteResult =
   | { ok: true; quote: Quote }
   | { ok: false; status: number; message: string };
 
-type PublicCheckoutResult =
-  | { ok: true; checkout_url: string }
+type PublicQuoteDecisionResult =
+  | { ok: true; message?: string }
   | { ok: false; status: number; message: string };
 
 type PublicCustomerResult =
@@ -22,6 +22,13 @@ async function readErrorMessage(response: Response, fallback: string) {
       const detail = data.detail;
       if (typeof detail === "string") {
         return detail;
+      }
+    }
+
+    if (typeof data === "object" && data !== null && "message" in data) {
+      const message = data.message;
+      if (typeof message === "string") {
+        return message;
       }
     }
 
@@ -49,8 +56,6 @@ export async function getPublicQuote(
     headers,
     cache: "no-store",
   });
-
-  //sd
 
   if (!response.ok) {
     return {
@@ -95,10 +100,11 @@ export async function getPublicCustomer(
   };
 }
 
-export async function createPublicQuoteCheckout(
-  quoteId: string | number,
+async function submitPublicQuoteDecision(
+  path: "/api/quote/accept/" | "/api/quote/reject/",
+  quoteId: number,
   accessToken?: string
-): Promise<PublicCheckoutResult> {
+): Promise<PublicQuoteDecisionResult> {
   const headers = new Headers({
     "Content-Type": "application/json",
   });
@@ -107,10 +113,10 @@ export async function createPublicQuoteCheckout(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const response = await fetch(buildApiUrl("/api/quote/checkout/"), {
+  const response = await fetch(buildApiUrl(path), {
     method: "POST",
     headers,
-    body: JSON.stringify({ quote_id: quoteId }),
+    body: JSON.stringify({ quote_id: Number(quoteId) }),
     cache: "no-store",
   });
 
@@ -120,23 +126,46 @@ export async function createPublicQuoteCheckout(
       status: response.status,
       message: await readErrorMessage(
         response,
-        "Failed to create checkout session."
+        "Unable to update this quote. Please try again."
       ),
     };
   }
 
-  const data = (await response.json()) as { checkout_url?: string };
-
-  if (!data.checkout_url) {
-    return {
-      ok: false,
-      status: 502,
-      message: "Checkout URL was not returned by the backend.",
-    };
+  let message: string | undefined;
+  try {
+    const data: unknown = await response.json();
+    if (typeof data === "object" && data !== null) {
+      const record = data as Record<string, unknown>;
+      for (const key of ["message", "detail", "success"] as const) {
+        if (key in record) {
+          const value = record[key];
+          if (typeof value === "string") {
+            message = value;
+            break;
+          }
+        }
+      }
+    }
+  } catch {
+    // A successful empty response is still a successful quote decision.
   }
 
   return {
     ok: true,
-    checkout_url: data.checkout_url,
+    message,
   };
+}
+
+export async function acceptPublicQuote(
+  quoteId: number,
+  accessToken?: string
+): Promise<PublicQuoteDecisionResult> {
+  return submitPublicQuoteDecision("/api/quote/accept/", quoteId, accessToken);
+}
+
+export async function rejectPublicQuote(
+  quoteId: number,
+  accessToken?: string
+): Promise<PublicQuoteDecisionResult> {
+  return submitPublicQuoteDecision("/api/quote/reject/", quoteId, accessToken);
 }

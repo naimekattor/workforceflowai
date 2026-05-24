@@ -2,7 +2,6 @@ import Image from "next/image";
 import {
   Briefcase,
   CalendarDays,
-  CreditCard,
   ReceiptText,
   StickyNote,
   User,
@@ -11,7 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getPublicCustomer, getPublicQuote } from "@/lib/api/public-quotes";
 import { formatCurrency } from "@/lib/invoices";
-import QuoteCheckoutButton from "./QuoteCheckoutButton";
+import QuoteDecisionButtons from "./QuoteDecisionButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +40,6 @@ function formatDateTime(value?: string) {
 function parseAmount(value?: string) {
   const amount = Number.parseFloat(value || "0");
   return Number.isNaN(amount) ? 0 : amount;
-}
-
-function getStatusClassName(status: string) {
-  if (status === "Accepted") return "bg-emerald-100 text-emerald-700";
-  if (status === "Sent") return "bg-blue-100 text-blue-700";
-  if (status === "Rejected") return "bg-red-100 text-red-700";
-  return "bg-slate-100 text-slate-700";
 }
 
 function DetailRow({
@@ -141,12 +133,11 @@ export default async function PublicQuotePage({
   const customerLabel =
     customer?.customer_name || quote.customer_name || "Customer";
   const totalAmount = parseAmount(quote.total_price || quote.price);
-  const deposit = parseAmount(quote.deposit);
 
   return (
     <main className="min-h-screen bg-[#f8fafc] px-4 py-6 sm:px-6 lg:py-10">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header className="mb-8 flex">
           <Image
             src="/images/workforceflowailogo1.png"
             alt="WorkforceFlow AI"
@@ -155,13 +146,6 @@ export default async function PublicQuotePage({
             className="h-auto w-52 object-contain"
             priority
           />
-          <span
-            className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-bold ${getStatusClassName(
-              quote.quote_status
-            )}`}
-          >
-            {quote.quote_status}
-          </span>
         </header>
 
         <section className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -175,7 +159,7 @@ export default async function PublicQuotePage({
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-600">
                 Please review the quote details below. If everything looks
-                correct, you can continue to checkout.
+                correct, you can accept or reject it here.
               </p>
             </div>
 
@@ -184,12 +168,12 @@ export default async function PublicQuotePage({
               <p className="mb-4 text-3xl font-bold text-slate-900">
                 {totalAmount > 0 ? formatCurrency(totalAmount) : "-"}
               </p>
-              <QuoteCheckoutButton quoteId={quote.id} />
+              <QuoteDecisionButtons quoteId={quote.id} />
             </div>
           </div>
         </section>
 
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard
             icon={CalendarDays}
             label="Quote Date"
@@ -199,11 +183,6 @@ export default async function PublicQuotePage({
             icon={CalendarDays}
             label="Valid Until"
             value={formatDate(quote.valid_until)}
-          />
-          <SummaryCard
-            icon={CreditCard}
-            label="Deposit"
-            value={formatCurrency(deposit)}
           />
           <SummaryCard
             icon={Briefcase}
@@ -222,8 +201,6 @@ export default async function PublicQuotePage({
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <DetailRow label="Quote Number" value={quote.invoice_number} />
-              <DetailRow label="Quote ID" value={quote.id} />
-              <DetailRow label="Status" value={quote.quote_status} />
               <DetailRow label="Job Type" value={quote.job_type || "No job"} />
               <DetailRow
                 label="Created"

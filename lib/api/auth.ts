@@ -8,6 +8,20 @@ export interface RegisterPayload {
   password: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ForgotPasswordConfirmPayload {
+  email: string;
+  verify_otp: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  new_password: string;
+}
+
 export interface RegisterResponse {
   user: {
     id: number;
@@ -23,8 +37,11 @@ export interface ApiErrorPayload {
   detail?: string;
   email?: string[];
   full_name?: string[];
+  message?: string;
+  new_password?: string[];
   non_field_errors?: string[];
   password?: string[];
+  verify_otp?: string[];
   [key: string]: unknown;
 }
 
@@ -46,14 +63,20 @@ function firstMessage(value: unknown): string | undefined {
   return undefined;
 }
 
-function getErrorMessage(data?: ApiErrorPayload): string {
+function getErrorMessage(
+  data?: ApiErrorPayload,
+  fallback = "Registration failed"
+): string {
   return (
     firstMessage(data?.email) ||
     firstMessage(data?.password) ||
     firstMessage(data?.full_name) ||
+    firstMessage(data?.verify_otp) ||
+    firstMessage(data?.new_password) ||
     firstMessage(data?.non_field_errors) ||
+    firstMessage(data?.message) ||
     firstMessage(data?.detail) ||
-    "Registration failed"
+    fallback
   );
 }
 
@@ -70,6 +93,60 @@ export async function registerUser(
     if (axios.isAxiosError<ApiErrorPayload>(error)) {
       const data = error.response?.data;
       throw new ApiRequestError(getErrorMessage(data), data);
+    }
+
+    throw error;
+  }
+}
+
+export async function forgotPassword(
+  payload: ForgotPasswordPayload
+): Promise<void> {
+  try {
+    await apiClient.post("/api/auth/forgot-password/", payload);
+  } catch (error) {
+    if (axios.isAxiosError<ApiErrorPayload>(error)) {
+      const data = error.response?.data;
+      throw new ApiRequestError(
+        getErrorMessage(data, "Failed to send password reset email"),
+        data
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function forgotPasswordConfirm(
+  payload: ForgotPasswordConfirmPayload
+): Promise<void> {
+  try {
+    await apiClient.post("/api/auth/forgot-password-confirm/", payload);
+  } catch (error) {
+    if (axios.isAxiosError<ApiErrorPayload>(error)) {
+      const data = error.response?.data;
+      throw new ApiRequestError(
+        getErrorMessage(data, "Failed to verify OTP"),
+        data
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function resetPassword(
+  payload: ResetPasswordPayload
+): Promise<void> {
+  try {
+    await apiClient.post("/api/auth/reset-password/", payload);
+  } catch (error) {
+    if (axios.isAxiosError<ApiErrorPayload>(error)) {
+      const data = error.response?.data;
+      throw new ApiRequestError(
+        getErrorMessage(data, "Failed to reset password"),
+        data
+      );
     }
 
     throw error;
