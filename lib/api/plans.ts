@@ -18,7 +18,8 @@ export interface PlanListResponse {
 }
 
 export interface PlanPurchaseCheckoutResponse {
-  redirect_url: string;
+  checkout_url?: string;
+  redirect_url?: string;
 }
 
 export const getPlans = async (): Promise<PlanListResponse> => {

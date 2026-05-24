@@ -69,14 +69,13 @@ export default function AccountPlans() {
       setCheckoutPlanId(plan.id);
       setErrorMessage("");
       const checkout = await createPlanPurchaseCheckout(plan.id);
+      const checkoutUrl = checkout.checkout_url || checkout.redirect_url;
 
-      if (!checkout.redirect_url) {
-        throw new Error("Checkout response did not include a redirect URL.");
+      if (!checkoutUrl) {
+        throw new Error("Checkout response did not include a checkout URL.");
       }
 
-      localStorage.setItem("currentPlanId", String(plan.id));
-      setCurrentPlanId(String(plan.id));
-      window.location.href = checkout.redirect_url;
+      window.location.assign(checkoutUrl);
     } catch (error) {
       console.error("Error creating plan checkout:", error);
       setErrorMessage("Failed to start checkout. Please try again.");

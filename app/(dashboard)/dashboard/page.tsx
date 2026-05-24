@@ -5,6 +5,7 @@ import { Plus, Users, Briefcase, FileText, TrendingUp, Receipt } from 'lucide-re
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { formatCurrency } from '@/lib/invoices';
+import { getCustomer } from '@/lib/api/customers';
 import { 
   getDashboardStats, 
   getRecentQuotes, 
@@ -14,11 +15,49 @@ import {
   RecentInvoice
 } from '@/lib/api/dashboard';
 
+type CustomerNameById = Record<number, string>;
+type CustomerBackedItem = {
+  customer: number;
+  customer_name?: string;
+};
+
+async function loadCustomerNames(items: CustomerBackedItem[]) {
+  const customerIds = Array.from(
+    new Set(
+      items
+        .filter((item) => !item.customer_name)
+        .map((item) => item.customer)
+        .filter(Boolean)
+    )
+  );
+
+  const customerResults = await Promise.allSettled(
+    customerIds.map(async (customerId) => {
+      const customer = await getCustomer(customerId);
+      return [customerId, customer.customer_name] as const;
+    })
+  );
+
+  return customerResults.reduce<CustomerNameById>((names, result) => {
+    if (result.status === 'fulfilled') {
+      const [customerId, customerName] = result.value;
+      names[customerId] = customerName;
+    }
+
+    return names;
+  }, {});
+}
+
+function getCustomerName(item: CustomerBackedItem, customerNameById: CustomerNameById) {
+  return item.customer_name || customerNameById[item.customer] || '';
+}
+
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentQuotes, setRecentQuotes] = useState<RecentQuote[]>([]);
   const [recentInvoices, setRecentInvoices] = useState<RecentInvoice[]>([]);
+  const [customerNameById, setCustomerNameById] = useState<CustomerNameById>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,19 +93,28 @@ export default function Dashboard() {
           setStats(null);
         }
 
+        const quotes = quotesResult.status === 'fulfilled' ? quotesResult.value : [];
+        const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
+        const loadedCustomerNames = await loadCustomerNames([...quotes, ...invoices]);
+
+        if (!isMounted) {
+          return;
+        }
+
         if (quotesResult.status === 'fulfilled') {
-          setRecentQuotes(quotesResult.value);
+          setRecentQuotes(quotes);
         } else {
           console.warn('Recent quotes unavailable.');
           setRecentQuotes([]);
         }
 
         if (invoicesResult.status === 'fulfilled') {
-          setRecentInvoices(invoicesResult.value);
+          setRecentInvoices(invoices);
         } else {
           console.warn('Recent invoices unavailable.');
           setRecentInvoices([]);
         }
+        setCustomerNameById(loadedCustomerNames);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -161,11 +209,14 @@ export default function Dashboard() {
           </div>
           <div className="p-6 space-y-4">
             {recentQuotes.length > 0 ? (
-              recentQuotes.map((quote) => (
+              recentQuotes.map((quote) => {
+                const customerName = getCustomerName(quote, customerNameById);
+
+                return (
                 <div key={quote.id} className="flex items-center justify-between p-4 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
                   <div>
                     <p className="text-sm font-bold text-slate-900">Q-{quote.quote_uuid.slice(0, 4)}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Customer ID: {quote.customer}</p>
+                    {customerName && <p className="text-xs text-slate-500 mt-0.5">{customerName}</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(quote.total_price || 0))}</p>
@@ -176,7 +227,8 @@ export default function Dashboard() {
                     </span>
                   </div>
                 </div>
-              ))
+              );
+              })
             ) : (
               <p className="text-sm text-slate-500 text-center py-4">No recent quotes</p>
             )}
@@ -191,22 +243,26 @@ export default function Dashboard() {
           </div>
           <div className="p-6 space-y-4">
             {recentInvoices.length > 0 ? (
-              recentInvoices.map((invoice) => (
+              recentInvoices.map((invoice) => {
+                const customerName = getCustomerName(invoice, customerNameById);
+
+                return (
                 <Link
                   key={invoice.id}
                   href={`/dashboard/invoices/${invoice.id}`}
                   className="flex items-center justify-between p-4 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors"
                 >
                   <div>
-                    <p className="text-sm font-bold text-slate-900">{invoice.invoice_number}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Customer ID: {invoice.customer}</p>
+                    <p className="text-sm font-bold text-slate-900">{invoice.invoice_number || `Invoice ${invoice.id}`}</p>
+                    {customerName && <p className="text-xs text-slate-500 mt-0.5">{customerName}</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(invoice.total_price || 0))}</p>
                     <p className="text-[10px] text-slate-500 mt-1">Created {new Date(invoice.created_at).toLocaleDateString()}</p>
                   </div>
                 </Link>
-              ))
+              );
+              })
             ) : (
               <p className="text-sm text-slate-500 text-center py-4">No recent invoices</p>
             )}

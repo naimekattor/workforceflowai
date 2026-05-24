@@ -4,7 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { getCustomer } from "@/lib/api/customers";
 import { deleteJob, getJobs, Job } from "@/lib/api/jobs";
+
+type CustomerNameById = Record<number, string>;
 
 function formatDate(value?: string) {
   if (!value) {
@@ -15,8 +18,8 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
 }
 
-function getCustomerLabel(job: Job) {
-  return job.customer_name || `Customer ID: ${job.customer}`;
+function getCustomerLabel(job: Job, customerNameById: CustomerNameById) {
+  return job.customer_name || customerNameById[job.customer] || `Customer ID: ${job.customer}`;
 }
 
 function getStatusClassName(status: string) {
@@ -28,6 +31,7 @@ function getStatusClassName(status: string) {
 export default function Jobs() {
   const { data: session, status } = useSession();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [customerNameById, setCustomerNameById] = useState<CustomerNameById>({});
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,22 +47,61 @@ export default function Jobs() {
       return;
     }
 
+    let isMounted = true;
+
     const fetchJobs = async () => {
       try {
         setLoading(true);
         setErrorMessage("");
         const data = await getJobs();
-        setJobs(data.results);
-        setTotalCount(data.count);
+        const customerIds = Array.from(
+          new Set(
+            data.results
+              .filter((job) => !job.customer_name)
+              .map((job) => job.customer)
+              .filter(Boolean)
+          )
+        );
+        const customerResults = await Promise.allSettled(
+          customerIds.map(async (customerId) => {
+            const customer = await getCustomer(customerId);
+            return [customerId, customer.customer_name] as const;
+          })
+        );
+        const loadedCustomerNames = customerResults.reduce<CustomerNameById>(
+          (names, result) => {
+            if (result.status === "fulfilled") {
+              const [customerId, customerName] = result.value;
+              names[customerId] = customerName;
+            }
+
+            return names;
+          },
+          {}
+        );
+
+        if (isMounted) {
+          setJobs(data.results);
+          setTotalCount(data.count);
+          setCustomerNameById(loadedCustomerNames);
+        }
       } catch (error) {
         console.error("Error fetching jobs:", error);
-        setErrorMessage("Failed to load jobs");
+        if (isMounted) {
+          setErrorMessage("Failed to load jobs");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchJobs();
+
+    return () => {
+      isMounted = false;
+    };
   }, [session?.accessToken, status]);
 
   const filteredJobs = useMemo(() => {
@@ -73,14 +116,14 @@ export default function Jobs() {
         job.title,
         job.site_address,
         job.jobstatus,
-        getCustomerLabel(job),
+        getCustomerLabel(job, customerNameById),
       ];
 
       return values.some((value) =>
         String(value).toLowerCase().includes(normalizedSearch)
       );
     });
-  }, [jobs, searchTerm]);
+  }, [customerNameById, jobs, searchTerm]);
 
   const handleDelete = async (job: Job) => {
     if (!window.confirm(`Delete job "${job.title}"?`)) {
@@ -167,7 +210,7 @@ export default function Jobs() {
                         {job.title}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-[13px] text-slate-700">{getCustomerLabel(job)}</td>
+                    <td className="px-6 py-4 text-[13px] text-slate-700">{getCustomerLabel(job, customerNameById)}</td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">{job.site_address || "-"}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(job.jobstatus)}`}>

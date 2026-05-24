@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, BadgeCheck, Calendar, Edit, FileText, MapPin, Trash2, User } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getCustomer } from "@/lib/api/customers";
 import { deleteJob, getJob, Job } from "@/lib/api/jobs";
 
 function getErrorMessage(error: unknown): string {
@@ -35,6 +36,25 @@ function getCustomerLabel(job: Job) {
   return job.customer_name || `Customer ID: ${job.customer}`;
 }
 
+async function getJobWithCustomerName(id: string) {
+  const job = await getJob(id);
+
+  if (job.customer_name || !job.customer) {
+    return job;
+  }
+
+  try {
+    const customer = await getCustomer(job.customer);
+    return {
+      ...job,
+      customer_name: customer.customer_name,
+    };
+  } catch (error) {
+    console.error("Error fetching job customer:", error);
+    return job;
+  }
+}
+
 function getStatusClassName(status: string) {
   return status === "Open"
     ? "bg-emerald-100 text-emerald-700"
@@ -56,7 +76,7 @@ export default function JobDetails() {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await getJob(id);
+        const data = await getJobWithCustomerName(id);
 
         if (isMounted) {
           setJob(data);

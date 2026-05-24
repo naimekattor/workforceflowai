@@ -13,6 +13,7 @@ export interface RecentQuote {
   id: number;
   quote_uuid: string;
   customer: number;
+  customer_name?: string;
   quote_status: string;
   total_price: string | number;
   created_at: string;
@@ -23,6 +24,7 @@ export interface RecentInvoice {
   quote_uuid: string;
   invoice_number: string;
   customer: number;
+  customer_name?: string;
   quote_status: string;
   total_price: string | number;
   created_at: string;
@@ -60,6 +62,7 @@ interface QuoteListResponse {
 interface InvoiceListItem {
   id: number;
   customer: number;
+  customer_name?: string;
   invoice_number?: string;
   invoice_uuid?: string;
   quote_uuid?: string;
@@ -110,6 +113,7 @@ function toRecentInvoice(invoice: InvoiceListItem): RecentInvoice {
     quote_uuid: invoice.quote_uuid || invoice.invoice_uuid || "",
     invoice_number: invoice.invoice_number || `Invoice ${invoice.id}`,
     customer: invoice.customer,
+    customer_name: invoice.customer_name,
     quote_status: invoice.quote_status || invoice.status || "",
     total_price: invoice.total_price ?? invoice.price ?? 0,
     created_at: invoice.created_at || invoice.issue_date || "",

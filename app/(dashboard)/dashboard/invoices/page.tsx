@@ -5,7 +5,10 @@ import { Eye, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getRecentInvoices, RecentInvoice } from '@/lib/api/dashboard';
+import { getCustomer } from '@/lib/api/customers';
 import { formatCurrency } from '@/lib/invoices';
+
+type CustomerNameById = Record<number, string>;
 
 function formatDateTime(value?: string) {
   if (!value) {
@@ -21,6 +24,10 @@ function formatAmount(value?: string | number) {
   return formatCurrency(Number.isNaN(amount) ? 0 : amount);
 }
 
+function getCustomerLabel(invoice: RecentInvoice, customerNameById: CustomerNameById) {
+  return invoice.customer_name || customerNameById[invoice.customer] || `Customer ID: ${invoice.customer}`;
+}
+
 function getStatusClassName(status: string) {
   if (status === 'Accepted') return 'bg-emerald-100 text-emerald-700';
   if (status === 'Sent') return 'bg-blue-100 text-blue-700';
@@ -32,6 +39,7 @@ export default function Invoices() {
   const { data: session, status } = useSession();
   const [query, setQuery] = useState('');
   const [invoices, setInvoices] = useState<RecentInvoice[]>([]);
+  const [customerNameById, setCustomerNameById] = useState<CustomerNameById>({});
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -52,9 +60,36 @@ export default function Invoices() {
         setLoading(true);
         setErrorMessage('');
         const data = await getRecentInvoices();
+        const invoiceRows = Array.isArray(data) ? data : [];
+        const customerIds = Array.from(
+          new Set(
+            invoiceRows
+              .filter((invoice) => !invoice.customer_name)
+              .map((invoice) => invoice.customer)
+              .filter(Boolean)
+          )
+        );
+        const customerResults = await Promise.allSettled(
+          customerIds.map(async (customerId) => {
+            const customer = await getCustomer(customerId);
+            return [customerId, customer.customer_name] as const;
+          })
+        );
+        const loadedCustomerNames = customerResults.reduce<CustomerNameById>(
+          (names, result) => {
+            if (result.status === 'fulfilled') {
+              const [customerId, customerName] = result.value;
+              names[customerId] = customerName;
+            }
+
+            return names;
+          },
+          {}
+        );
 
         if (isMounted) {
-          setInvoices(Array.isArray(data) ? data : []);
+          setInvoices(invoiceRows);
+          setCustomerNameById(loadedCustomerNames);
         }
       } catch (error) {
         console.error('Error fetching invoices:', error);
@@ -87,7 +122,7 @@ export default function Invoices() {
         invoice.invoice_number,
         invoice.quote_uuid,
         invoice.quote_status,
-        invoice.customer,
+        getCustomerLabel(invoice, customerNameById),
         invoice.total_price,
       ];
 
@@ -95,7 +130,7 @@ export default function Invoices() {
         String(value).toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [invoices, query]);
+  }, [customerNameById, invoices, query]);
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">
@@ -163,7 +198,7 @@ export default function Invoices() {
                       </Link>
                     </td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">
-                      Customer ID: {invoice.customer}
+                      {getCustomerLabel(invoice, customerNameById)}
                     </td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">
                       <span className="inline-block max-w-[220px] truncate align-bottom" title={invoice.quote_uuid}>
