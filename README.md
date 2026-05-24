@@ -16,6 +16,11 @@ For production, set `NEXTAUTH_URL` to the public HTTPS domain, keep a stable
 `NEXTAUTH_SECRET`, and set `NEXT_PUBLIC_BASE_URL=https://api.revboost.net/api`.
 Do not deploy with `NEXTAUTH_URL=http://localhost:3000`.
 
+When deploying with Docker, pass `NEXT_PUBLIC_BASE_URL` as a build argument as
+well as an environment variable. Next.js embeds `NEXT_PUBLIC_*` values during
+`next build`, so setting it only at container runtime leaves browser API calls
+relative to the frontend domain.
+
 First, run the development server:
 
 ```bash
