@@ -12,6 +12,7 @@ export interface UserProfile {
   email: string;
   name?: string;
   full_name?: string;
+  is_stripe_connect_connected?: boolean;
   usertype: string | null;
 }
 

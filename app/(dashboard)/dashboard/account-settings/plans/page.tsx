@@ -3,8 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, Crown } from "lucide-react";
 import Link from "next/link";
+import { isAxiosError } from "axios";
+import { getUserProfile } from "@/lib/api/business";
 import { createPlanPurchaseCheckout, getPlans, Plan } from "@/lib/api/plans";
+import {
+  createStripeConnectAccount,
+  createStripeConnectOnboardingLink,
+} from "@/lib/api/billing";
 import { formatCurrency } from "@/lib/invoices";
+import { showError, showInfo } from "@/lib/ui/alerts";
 
 function formatPlanPrice(price: string) {
   const amount = Number.parseFloat(price);
@@ -17,6 +24,53 @@ function isPopularPlan(plan: Plan) {
 
 function planStorageKeys(plan: Plan) {
   return [String(plan.id), plan.plan_type.toLowerCase(), plan.name.toLowerCase()];
+}
+
+function isFreePlan(plan: Plan) {
+  const price = Number.parseFloat(plan.price);
+  return (
+    (!Number.isNaN(price) && price <= 0) ||
+    plan.plan_type.toLowerCase() === "free" ||
+    plan.name.toLowerCase() === "free"
+  );
+}
+
+function getCheckoutErrorMessage(error: unknown) {
+  if (isAxiosError<{ detail?: string; error?: string; message?: string }>(error)) {
+    const data = error.response?.data;
+    return (
+      data?.detail ||
+      data?.error ||
+      data?.message ||
+      "Failed to start the subscription flow. Please try again."
+    );
+  }
+
+  return "Failed to start the subscription flow. Please try again.";
+}
+
+async function redirectToStripeOnboarding() {
+  await createStripeConnectAccount();
+  const onboardingLink = await createStripeConnectOnboardingLink({
+    refresh_url: `${window.location.origin}/dashboard`,
+  });
+
+  if (!onboardingLink.url) {
+    throw new Error("Stripe onboarding response did not include a URL.");
+  }
+
+  window.location.assign(onboardingLink.url);
+}
+
+async function redirectToSubscriptionCheckout(planId: number) {
+  const checkout = await createPlanPurchaseCheckout(planId);
+  const checkoutUrl = checkout.checkout_url || checkout.redirect_url;
+
+  if (!checkoutUrl) {
+    throw new Error("Checkout response did not include a checkout URL.");
+  }
+
+  window.location.assign(checkoutUrl);
 }
 
 export default function AccountPlans() {
@@ -65,20 +119,30 @@ export default function AccountPlans() {
   }, []);
 
   const choosePlan = async (plan: Plan) => {
+    if (isFreePlan(plan)) {
+      return;
+    }
+
     try {
       setCheckoutPlanId(plan.id);
       setErrorMessage("");
-      const checkout = await createPlanPurchaseCheckout(plan.id);
-      const checkoutUrl = checkout.checkout_url || checkout.redirect_url;
+      const profile = await getUserProfile();
 
-      if (!checkoutUrl) {
-        throw new Error("Checkout response did not include a checkout URL.");
+      if (!profile.is_stripe_connect_connected) {
+        await showInfo(
+          "First you need to connect your Stripe account before subscribing.",
+          "Connect Stripe first"
+        );
+        await redirectToStripeOnboarding();
+        return;
       }
 
-      window.location.assign(checkoutUrl);
+      await redirectToSubscriptionCheckout(plan.id);
     } catch (error) {
-      console.error("Error creating plan checkout:", error);
-      setErrorMessage("Failed to start checkout. Please try again.");
+      console.error("Error starting subscription flow:", error);
+      const message = getCheckoutErrorMessage(error);
+      setErrorMessage(message);
+      await showError(message);
     } finally {
       setCheckoutPlanId(null);
     }
@@ -119,6 +183,7 @@ export default function AccountPlans() {
           plans.map((plan) => {
             const isCurrent = planStorageKeys(plan).includes(currentPlanId.toLowerCase());
             const popular = isPopularPlan(plan);
+            const freePlan = isFreePlan(plan);
             const features =
               plan.features.length > 0 ? plan.features : [plan.description || `${plan.name} Plan`];
 
@@ -177,9 +242,9 @@ export default function AccountPlans() {
                   <button
                     type="button"
                     onClick={() => choosePlan(plan)}
-                    disabled={!plan.is_active || checkoutPlanId !== null}
+                    disabled={freePlan || !plan.is_active || checkoutPlanId !== null}
                     className={`mt-auto w-full py-2.5 rounded-lg text-xs font-bold transition-colors ${
-                      !plan.is_active || checkoutPlanId !== null
+                      freePlan || !plan.is_active || checkoutPlanId !== null
                         ? "bg-slate-200 text-slate-500 cursor-not-allowed"
                         : popular
                         ? "bg-white text-cyan-600 hover:bg-slate-50"
@@ -187,9 +252,11 @@ export default function AccountPlans() {
                     }`}
                   >
                     {checkoutPlanId === plan.id
-                      ? "Opening checkout..."
+                      ? "Starting..."
+                      : freePlan
+                      ? "Free Plan"
                       : plan.is_active
-                      ? `Upgrade to ${plan.name}`
+                      ? "Subscribe"
                       : "Unavailable"}
                   </button>
                 )}
