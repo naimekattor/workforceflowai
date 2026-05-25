@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bell, CheckCircle2, FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { getNotifications, Notification } from "@/lib/api/notifications";
+import {
+  getNotifications,
+  markNotificationRead,
+  Notification,
+} from "@/lib/api/notifications";
 
 function getActivityType(message: string) {
   const normalizedMessage = message.toLowerCase();
@@ -38,11 +42,21 @@ function formatActivityTime(value: string) {
   };
 }
 
-function ActivityRow({ notification }: { notification: Notification }) {
+function ActivityRow({
+  notification,
+  onMarkRead,
+}: {
+  notification: Notification;
+  onMarkRead: (notification: Notification) => void;
+}) {
   const activityTime = formatActivityTime(notification.created_at);
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-slate-100 bg-white p-5 transition-all hover:border-slate-200 hover:shadow-sm">
+    <button
+      type="button"
+      onClick={() => onMarkRead(notification)}
+      className="flex w-full items-start gap-4 rounded-xl border border-slate-100 bg-white p-5 text-left transition-all hover:border-slate-200 hover:shadow-sm"
+    >
       <div className="mt-1">
         {notification.is_read ? (
           <CheckCircle2 className="h-5 w-5 text-slate-400" />
@@ -69,7 +83,7 @@ function ActivityRow({ notification }: { notification: Notification }) {
           System / {activityTime.date} / {activityTime.time}
         </p>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -103,6 +117,27 @@ export default function Activity() {
     () => notifications.filter((notification) => !notification.is_read).length,
     [notifications]
   );
+
+  const handleMarkRead = async (notification: Notification) => {
+    if (notification.is_read) return;
+
+    setNotifications((current) =>
+      current.map((item) =>
+        item.id === notification.id ? { ...item, is_read: true } : item
+      )
+    );
+
+    try {
+      await markNotificationRead(notification.id);
+    } catch {
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, is_read: false } : item
+        )
+      );
+      setError("Failed to mark notification as read.");
+    }
+  };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -181,6 +216,7 @@ export default function Activity() {
               <ActivityRow
                 key={notification.id}
                 notification={notification}
+                onMarkRead={handleMarkRead}
               />
             ))
           ) : (

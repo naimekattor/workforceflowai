@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/invoices';
 import { getQuotes, deleteQuote, sendQuoteEmail, Quote } from '@/lib/api/quotes';
 import { getCustomers, Customer } from '@/lib/api/customers';
 import { useSession } from 'next-auth/react';
+import { confirmAction, showError, showSuccess } from '@/lib/ui/alerts';
 
 export default function Quotes() {
   const { data: session } = useSession();
@@ -19,6 +20,11 @@ export default function Quotes() {
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  const getQuoteCustomerName = (quote: Quote) =>
+    quote.customer_name ||
+    customers.find((customer) => customer.id === quote.customer)?.customer_name ||
+    `Customer ID: ${quote.customer}`;
 
   const fetchData = async () => {
     try {
@@ -44,15 +50,21 @@ export default function Quotes() {
   }, [session]);
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this quote?')) {
-      try {
-        await deleteQuote(id);
-        setQuotes(quotes.filter(q => q.id !== id));
-        setTotalCount(prev => prev - 1);
-      } catch (error) {
-        console.error('Error deleting quote:', error);
-        alert('Failed to delete quote');
-      }
+    const confirmed = await confirmAction({
+      title: 'Delete quote?',
+      text: 'This quote will be permanently removed.',
+      confirmButtonText: 'Delete',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deleteQuote(id);
+      setQuotes(quotes.filter(q => q.id !== id));
+      setTotalCount(prev => prev - 1);
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      await showError('Failed to delete quote');
     }
   };
 
@@ -72,7 +84,7 @@ export default function Quotes() {
     try {
       setIsSending(true);
       await sendQuoteEmail(selectedQuoteId);
-      alert('Quote sent successfully to customer!');
+      await showSuccess('Quote sent successfully to customer!');
       
       // Update status in local state
       setQuotes(quotes.map(q => 
@@ -82,7 +94,7 @@ export default function Quotes() {
       closeSendModal();
     } catch (error) {
       console.error('Error sending quote email:', error);
-      alert('Failed to send quote email');
+      await showError('Failed to send quote email');
     } finally {
       setIsSending(false);
     }
@@ -90,7 +102,7 @@ export default function Quotes() {
 
   const filteredQuotes = quotes.filter(q => 
     String(q.id).includes(searchTerm) || 
-    (q.customer_name && q.customer_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    getQuoteCustomerName(q).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -157,7 +169,7 @@ export default function Quotes() {
                         Q-{quote.quote_uuid.slice(0, 4)}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-[13px] text-slate-700">{quote.customer_name || `Customer ID: ${quote.customer}`}</td>
+                    <td className="px-6 py-4 text-[13px] text-slate-700">{getQuoteCustomerName(quote)}</td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">{new Date(quote.created_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-[13px] font-bold text-slate-900">{formatCurrency(parseFloat(quote.price || '0'))}</td>
                     <td className="px-6 py-4">
@@ -228,7 +240,7 @@ export default function Quotes() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Send Quote</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Send this quote to the customer's email</p>
+                <p className="text-xs text-slate-500 mt-0.5">Send this quote to the customer&apos;s email</p>
               </div>
               <button
                 type="button"

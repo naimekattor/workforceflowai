@@ -6,7 +6,11 @@ import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { ApiRequestError, registerUser } from "@/lib/api/auth";
+import {
+  ApiRequestError,
+  registerUser,
+  sendEmailVerificationOtp,
+} from "@/lib/api/auth";
 
 interface FormData {
   name: string;
@@ -114,21 +118,43 @@ export default function SignUp() {
         password: nextFormData.password,
       });
 
-      // 2. Auto sign-in via NextAuth after successful registration
-      const result = await signIn("credentials", {
-        email: nextFormData.email,
-        password: nextFormData.password,
-        redirect: false,
-      });
+      window.sessionStorage.setItem(
+        "pendingVerificationEmail",
+        nextFormData.email
+      );
 
-      if (result?.error) {
-        setErrors({ general: "Account created but sign-in failed. Please sign in manually." });
-        router.push("/login");
-        return;
+      try {
+        await sendEmailVerificationOtp({ email: nextFormData.email });
+      } catch {
+        // The verify page has a resend button if the initial send fails.
       }
 
-      // 3. Go to onboarding
-      router.push("/onboarding");
+      // 2. Auto sign-in if the backend allows login before email verification.
+      let shouldSignInAfterVerification = false;
+
+      try {
+        const result = await signIn("credentials", {
+          email: nextFormData.email,
+          password: nextFormData.password,
+          redirect: false,
+        });
+
+        shouldSignInAfterVerification = Boolean(result?.error);
+      } catch {
+        shouldSignInAfterVerification = true;
+      }
+
+      if (shouldSignInAfterVerification) {
+        window.sessionStorage.setItem(
+          "pendingVerificationPassword",
+          nextFormData.password
+        );
+      }
+
+      // 3. Verify email before onboarding
+      router.push(
+        `/verify-email?email=${encodeURIComponent(nextFormData.email)}`
+      );
       router.refresh();
 
     } catch (err: unknown) {

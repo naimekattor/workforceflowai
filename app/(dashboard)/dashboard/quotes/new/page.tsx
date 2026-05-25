@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { getCustomers, Customer } from '@/lib/api/customers';
 import { createQuote, createLineItem } from '@/lib/api/quotes';
 import { formatCurrency } from '@/lib/invoices';
+import { showError, showInfo, showSuccess } from '@/lib/ui/alerts';
 
 const JOB_TYPE_OPTIONS = [
   { value: 'No_Job', label: 'No Job' },
@@ -122,7 +123,7 @@ export default function AddQuote() {
 
   const onSubmit: SubmitHandler<QuoteInput> = async (data) => {
     if (!session?.accessToken) {
-      alert("You must be logged in to create a quote.");
+      await showInfo("You must be logged in to create a quote.");
       return;
     }
 
@@ -153,11 +154,11 @@ export default function AddQuote() {
       
       await Promise.all(itemPromises);
       
-      alert("Quote created successfully!");
+      await showSuccess("Quote created successfully!");
       router.push("/dashboard/quotes");
     } catch (error: unknown) {
       console.error("Error creating quote:", error);
-      alert(formatApiError(error));
+      await showError(formatApiError(error));
     }
   };
 

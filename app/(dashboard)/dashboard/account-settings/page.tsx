@@ -31,6 +31,7 @@ import {
 import CollaboratorList from '@/components/dashboard/CollaboratorList';
 import { BillingInfo, getBillingHistory } from '@/lib/api/billing';
 import { NotificationSettings, getNotificationSettings, updateNotificationSettings } from '@/lib/api/notifications';
+import { showError, showSuccess } from '@/lib/ui/alerts';
 
 type Plan = {
   id: string;
@@ -529,11 +530,11 @@ export default function AccountSettings() {
         new_customer: notificationSettings.new_customer,
       });
       setNotificationSettings(updatedSettings);
-      alert('Notification settings saved successfully!');
+      await showSuccess('Notification settings saved successfully!');
     } catch (error) {
       console.error('Error saving notification settings:', error);
       setNotificationSettingsError('Failed to save notification settings');
-      alert('Failed to save notification settings');
+      await showError('Failed to save notification settings');
     } finally {
       setIsSaving(false);
     }
@@ -554,10 +555,10 @@ export default function AccountSettings() {
         buildBusinessPayload(business)
       );
       setBusiness(updatedBusiness);
-      alert('Settings saved successfully!');
+      await showSuccess('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Failed to save settings');
+      await showError('Failed to save settings');
     } finally {
       setIsSaving(false);
     }

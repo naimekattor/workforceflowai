@@ -19,6 +19,7 @@ import {
   deleteCollaborator,
   getCollaborator,
 } from "@/lib/api/collaborators";
+import { confirmAction, showError } from "@/lib/ui/alerts";
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (
@@ -100,7 +101,15 @@ export default function TeamMemberDetails() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!collaborator || !window.confirm(`Delete collaborator "${collaborator.full_name || collaborator.email}"?`)) {
+    if (!collaborator) return;
+
+    const confirmed = await confirmAction({
+      title: "Delete collaborator?",
+      text: `Delete collaborator "${collaborator.full_name || collaborator.email}"?`,
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -111,7 +120,7 @@ export default function TeamMemberDetails() {
       router.refresh();
     } catch (error) {
       console.error("Error deleting collaborator:", error);
-      alert(getErrorMessage(error, "Failed to delete collaborator."));
+      await showError(getErrorMessage(error, "Failed to delete collaborator."));
     } finally {
       setDeleting(false);
     }

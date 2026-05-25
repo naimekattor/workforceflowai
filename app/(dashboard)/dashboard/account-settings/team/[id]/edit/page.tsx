@@ -12,6 +12,7 @@ import {
   getCollaborator,
   updateCollaborator,
 } from "@/lib/api/collaborators";
+import { showError } from "@/lib/ui/alerts";
 
 type CollaboratorFormInput = {
   work_type: string;
@@ -166,7 +167,7 @@ export default function EditTeamMember() {
       router.refresh();
     } catch (error) {
       console.error("Error updating collaborator:", error);
-      alert(getErrorMessage(error, "Failed to update collaborator."));
+      await showError(getErrorMessage(error, "Failed to update collaborator."));
     }
   };
 

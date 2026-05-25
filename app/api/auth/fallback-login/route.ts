@@ -21,6 +21,12 @@ interface LoginResponse {
   refresh: string;
 }
 
+type LoginErrorResponse = {
+  detail?: string;
+  error?: string;
+  is_verified?: boolean;
+};
+
 function isLoginResponse(value: unknown): value is LoginResponse {
   if (!value || typeof value !== "object") return false;
 
@@ -75,9 +81,16 @@ function shouldUseSecureCookies(request: NextRequest): boolean {
   );
 }
 
-function redirectToLogin(request: NextRequest, error: string): NextResponse {
+function redirectToLogin(
+  request: NextRequest,
+  error: string,
+  email?: string
+): NextResponse {
   const loginUrl = new URL("/login", requestOrigin(request));
   loginUrl.searchParams.set("error", error);
+  if (email) {
+    loginUrl.searchParams.set("email", email);
+  }
   return NextResponse.redirect(loginUrl, { status: 303 });
 }
 
@@ -141,6 +154,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!loginResponse.ok) {
+      const data = (await loginResponse.json().catch(() => null)) as
+        | LoginErrorResponse
+        | null;
+
+      if (data?.is_verified === false) {
+        return redirectToLogin(request, "EmailNotVerified", email);
+      }
+
       return redirectToLogin(request, "CredentialsSignin");
     }
 

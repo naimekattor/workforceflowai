@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { createCustomer } from "@/lib/api/customers";
 import { useSession } from "next-auth/react";
+import { showError, showInfo, showSuccess } from "@/lib/ui/alerts";
 
 type Input = {
   customer_name: string;
@@ -17,6 +18,30 @@ type Input = {
   site_address: string;
   notes?: string;
 };
+
+function getCustomerCreateError(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response
+  ) {
+    const data = error.response.data;
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "detail" in data &&
+      typeof data.detail === "string"
+    ) {
+      return data.detail;
+    }
+  }
+
+  return error instanceof Error ? error.message : "Something went wrong!";
+}
 
 export default function AddCustomer() {
   const router = useRouter();
@@ -30,18 +55,18 @@ export default function AddCustomer() {
 
   const onSubmit: SubmitHandler<Input> = async (data) => {
     if (!session?.accessToken) {
-      alert("You must be logged in to create a customer.");
+      await showInfo("You must be logged in to create a customer.");
       return;
     }
 
     try {
       await createCustomer(data);
       reset();
-      alert("Customer created successfully!");
+      await showSuccess("Customer created successfully!");
       router.push("/dashboard/customers");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating customer:", error);
-      alert(error.response?.data?.detail || "Something went wrong!");
+      await showError(getCustomerCreateError(error));
     }
   };
 
@@ -169,4 +194,4 @@ export default function AddCustomer() {
       </div>
     </div>
   );
-}
+}

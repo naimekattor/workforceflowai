@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { getCustomer, updateCustomer } from '@/lib/api/customers';
+import { showError } from '@/lib/ui/alerts';
 
 type CustomerFormInput = {
   customer_name: string;
@@ -88,7 +89,7 @@ export default function EditCustomer() {
       router.push(`/dashboard/customers/${id}`);
       router.refresh();
     } catch (error) {
-      alert(getErrorMessage(error));
+      await showError(getErrorMessage(error));
     }
   };
 

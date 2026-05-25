@@ -17,6 +17,15 @@ export interface ForgotPasswordConfirmPayload {
   verify_otp: string;
 }
 
+export interface VerifyEmailPayload {
+  email: string;
+  otp: string;
+}
+
+export interface SendEmailVerificationOtpPayload {
+  email: string;
+}
+
 export interface ResetPasswordPayload {
   email: string;
   new_password: string;
@@ -40,6 +49,7 @@ export interface ApiErrorPayload {
   message?: string;
   new_password?: string[];
   non_field_errors?: string[];
+  otp?: string[];
   password?: string[];
   verify_otp?: string[];
   [key: string]: unknown;
@@ -71,6 +81,7 @@ function getErrorMessage(
     firstMessage(data?.email) ||
     firstMessage(data?.password) ||
     firstMessage(data?.full_name) ||
+    firstMessage(data?.otp) ||
     firstMessage(data?.verify_otp) ||
     firstMessage(data?.new_password) ||
     firstMessage(data?.non_field_errors) ||
@@ -93,6 +104,40 @@ export async function registerUser(
     if (axios.isAxiosError<ApiErrorPayload>(error)) {
       const data = error.response?.data;
       throw new ApiRequestError(getErrorMessage(data), data);
+    }
+
+    throw error;
+  }
+}
+
+export async function verifyEmail(payload: VerifyEmailPayload): Promise<void> {
+  try {
+    await apiClient.post("/api/auth/verify-email/", payload);
+  } catch (error) {
+    if (axios.isAxiosError<ApiErrorPayload>(error)) {
+      const data = error.response?.data;
+      throw new ApiRequestError(
+        getErrorMessage(data, "Failed to verify email"),
+        data
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function sendEmailVerificationOtp(
+  payload: SendEmailVerificationOtpPayload
+): Promise<void> {
+  try {
+    await apiClient.post("/api/auth/send-email-verification-otp/", payload);
+  } catch (error) {
+    if (axios.isAxiosError<ApiErrorPayload>(error)) {
+      const data = error.response?.data;
+      throw new ApiRequestError(
+        getErrorMessage(data, "Failed to resend verification code"),
+        data
+      );
     }
 
     throw error;

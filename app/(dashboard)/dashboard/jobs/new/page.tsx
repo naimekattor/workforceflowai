@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { Customer, getCustomers } from "@/lib/api/customers";
 import { createJob, JobStatus } from "@/lib/api/jobs";
+import { showError, showInfo, showSuccess } from "@/lib/ui/alerts";
 
 type JobInput = {
   jobstatus: JobStatus;
@@ -97,7 +98,7 @@ export default function AddJob() {
 
   const onSubmit: SubmitHandler<JobInput> = async (data) => {
     if (!session?.accessToken) {
-      alert("You must be logged in to create a job.");
+      await showInfo("You must be logged in to create a job.");
       return;
     }
 
@@ -111,12 +112,12 @@ export default function AddJob() {
       });
 
       reset();
-      alert("Job created successfully!");
+      await showSuccess("Job created successfully!");
       router.push("/dashboard/jobs");
       router.refresh();
     } catch (error) {
       console.error("Error creating job:", error);
-      alert(formatApiError(error));
+      await showError(formatApiError(error));
     }
   };
 

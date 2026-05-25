@@ -17,6 +17,7 @@ import { useSession } from 'next-auth/react';
 import { getQuote, getStripeCheckoutUrl, Quote } from '@/lib/api/quotes';
 import { Customer, getCustomer } from '@/lib/api/customers';
 import { formatCurrency } from '@/lib/invoices';
+import { showError } from '@/lib/ui/alerts';
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (
@@ -141,7 +142,7 @@ export default function QuoteDetails() {
       window.location.href = checkout_url;
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      alert(getErrorMessage(error, 'Failed to initiate checkout. Please try again.'));
+      await showError(getErrorMessage(error, 'Failed to initiate checkout. Please try again.'));
     } finally {
       setCheckoutLoading(false);
     }

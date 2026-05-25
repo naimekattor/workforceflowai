@@ -8,6 +8,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { useSession } from "next-auth/react";
 import { Customer, getCustomers } from "@/lib/api/customers";
 import { getJob, Job, JobStatus, updateJob } from "@/lib/api/jobs";
+import { showError } from "@/lib/ui/alerts";
 
 type JobFormInput = {
   jobstatus: JobStatus;
@@ -152,7 +153,7 @@ export default function EditJob() {
       router.push(`/dashboard/jobs/${id}`);
       router.refresh();
     } catch (error) {
-      alert(getErrorMessage(error));
+      await showError(getErrorMessage(error));
     }
   };
 

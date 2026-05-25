@@ -11,6 +11,7 @@ import {
   getCollaboratorStats,
   getCollaborators,
 } from "@/lib/api/collaborators";
+import { confirmAction, showError } from "@/lib/ui/alerts";
 
 const PAGE_SIZE = 10;
 
@@ -170,7 +171,13 @@ export default function CollaboratorList({
   };
 
   const handleDelete = async (collaborator: Collaborator) => {
-    if (!window.confirm(`Delete collaborator "${collaborator.full_name || collaborator.email}"?`)) {
+    const confirmed = await confirmAction({
+      title: "Delete collaborator?",
+      text: `Delete collaborator "${collaborator.full_name || collaborator.email}"?`,
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -199,7 +206,7 @@ export default function CollaboratorList({
       });
     } catch (error) {
       console.error("Error deleting collaborator:", error);
-      alert("Failed to delete collaborator");
+      await showError("Failed to delete collaborator");
     }
   };
 

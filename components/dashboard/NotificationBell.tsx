@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   getNotificationWebSocketUrl,
   getNotifications,
+  markNotificationRead,
   Notification,
 } from "@/lib/api/notifications";
 
@@ -91,6 +92,28 @@ export function NotificationBell() {
     () => notifications.filter((notification) => !notification.is_read).length,
     [notifications]
   );
+
+  const handleMarkRead = async (notification: Notification) => {
+    if (notification.is_read) return;
+
+    setNotificationState((current) => ({
+      token: current.token,
+      items: current.items.map((item) =>
+        item.id === notification.id ? { ...item, is_read: true } : item
+      ),
+    }));
+
+    try {
+      await markNotificationRead(notification.id);
+    } catch {
+      setNotificationState((current) => ({
+        token: current.token,
+        items: current.items.map((item) =>
+          item.id === notification.id ? { ...item, is_read: false } : item
+        ),
+      }));
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -201,11 +224,13 @@ export function NotificationBell() {
               </p>
             ) : (
               notifications.map((notification) => (
-                <div
+                <button
                   key={notification.id}
+                  type="button"
+                  onClick={() => handleMarkRead(notification)}
                   className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${
                     notification.is_read ? "bg-white" : "bg-cyan-50/60"
-                  }`}
+                  } block w-full text-left transition-colors hover:bg-slate-50`}
                 >
                   <p className="text-sm font-medium text-slate-800">
                     {notification.message}
@@ -213,7 +238,7 @@ export function NotificationBell() {
                   <p className="mt-1 text-[11px] text-slate-400">
                     {formatNotificationTime(notification.created_at)}
                   </p>
-                </div>
+                </button>
               ))
             )}
           </div>

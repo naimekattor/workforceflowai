@@ -144,6 +144,12 @@ export async function POST(request: NextRequest) {
     }
 
     const data = (await registerResponse.json()) as RegisterResponse;
+    await fetch(buildServerApiUrl("/api/auth/send-email-verification-otp/"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).catch(() => null);
+
     const token = await encode({
       maxAge: SESSION_MAX_AGE,
       secret: AUTH_SECRET,
@@ -157,10 +163,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const response = NextResponse.redirect(
-      new URL("/onboarding", requestOrigin(request)),
-      { status: 303 }
-    );
+    const verifyEmailUrl = new URL("/verify-email", requestOrigin(request));
+    verifyEmailUrl.searchParams.set("email", email);
+
+    const response = NextResponse.redirect(verifyEmailUrl, { status: 303 });
     setSessionCookie(response, request, token);
     return response;
   } catch (error) {

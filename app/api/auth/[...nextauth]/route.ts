@@ -16,6 +16,12 @@ const AUTH_SECRET =
   process.env.AUTH_SECRET ||
   "revboostai-local-dev-auth-secret-change-me";
 
+type LoginErrorResponse = {
+  detail?: string;
+  error?: string;
+  is_verified?: boolean;
+};
+
 export const authOptions: NextAuthOptions = {
   secret: AUTH_SECRET,
 
@@ -41,10 +47,17 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!res.ok) {
-            const error = (await res.json().catch(() => null)) as {
-              detail?: string;
-            } | null;
-            throw new Error(error?.detail || "Invalid credentials");
+            const error = (await res.json().catch(() => null)) as
+              | LoginErrorResponse
+              | null;
+
+            if (error?.is_verified === false) {
+              throw new Error("EmailNotVerified");
+            }
+
+            throw new Error(
+              error?.detail || error?.error || "Invalid credentials"
+            );
           }
 
           const data = await res.json();

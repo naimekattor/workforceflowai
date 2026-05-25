@@ -5,6 +5,7 @@ import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getCustomers, deleteCustomer, Customer } from '@/lib/api/customers';
 import { useSession } from 'next-auth/react';
+import { confirmAction, showError } from '@/lib/ui/alerts';
 
 export default function Customers() {
   const { data: session } = useSession();
@@ -33,15 +34,21 @@ export default function Customers() {
   }, [session]);
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
-      try {
-        await deleteCustomer(id);
-        setCustomers(customers.filter(c => c.id !== id));
-        setTotalCount(prev => prev - 1);
-      } catch (error) {
-        console.error('Error deleting customer:', error);
-        alert('Failed to delete customer');
-      }
+    const confirmed = await confirmAction({
+      title: 'Delete customer?',
+      text: 'This customer will be permanently removed.',
+      confirmButtonText: 'Delete',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deleteCustomer(id);
+      setCustomers(customers.filter(c => c.id !== id));
+      setTotalCount(prev => prev - 1);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      await showError('Failed to delete customer');
     }
   };
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { getCustomer } from "@/lib/api/customers";
 import { deleteJob, getJobs, Job } from "@/lib/api/jobs";
+import { confirmAction, showError } from "@/lib/ui/alerts";
 
 type CustomerNameById = Record<number, string>;
 
@@ -126,7 +127,13 @@ export default function Jobs() {
   }, [customerNameById, jobs, searchTerm]);
 
   const handleDelete = async (job: Job) => {
-    if (!window.confirm(`Delete job "${job.title}"?`)) {
+    const confirmed = await confirmAction({
+      title: "Delete job?",
+      text: `Delete job "${job.title}"?`,
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -136,7 +143,7 @@ export default function Jobs() {
       setTotalCount((count) => Math.max(0, count - 1));
     } catch (error) {
       console.error("Error deleting job:", error);
-      alert("Failed to delete job");
+      await showError("Failed to delete job");
     }
   };
 

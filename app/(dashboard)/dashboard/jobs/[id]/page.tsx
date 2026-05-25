@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getCustomer } from "@/lib/api/customers";
 import { deleteJob, getJob, Job } from "@/lib/api/jobs";
+import { confirmAction, showError } from "@/lib/ui/alerts";
 
 function getErrorMessage(error: unknown): string {
   if (
@@ -100,7 +101,15 @@ export default function JobDetails() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!job || !window.confirm(`Delete job "${job.title}"?`)) {
+    if (!job) return;
+
+    const confirmed = await confirmAction({
+      title: "Delete job?",
+      text: `Delete job "${job.title}"?`,
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -110,7 +119,7 @@ export default function JobDetails() {
       router.push("/dashboard/jobs");
       router.refresh();
     } catch (err) {
-      alert(getErrorMessage(err).replace("load", "delete"));
+      await showError(getErrorMessage(err).replace("load", "delete"));
     } finally {
       setIsDeleting(false);
     }

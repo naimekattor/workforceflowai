@@ -70,6 +70,10 @@ export const getNotifications = async (): Promise<NotificationListResponse> => {
   throw new Error("Unable to load notifications.");
 };
 
+export const markNotificationRead = async (id: number): Promise<void> => {
+  await apiClient.put(`/api/notifications/${id}/mark-read/`);
+};
+
 export function getNotificationWebSocketUrl(accessToken: string): string {
   return buildWebSocketUrl(
     `/ws/notifications/?token=${encodeURIComponent(accessToken)}`

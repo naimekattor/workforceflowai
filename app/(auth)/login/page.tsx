@@ -34,6 +34,10 @@ function getStringFormValue(formData: globalThis.FormData, key: string): string 
 }
 
 function getLoginErrorMessage(error: string | null): string {
+  if (isEmailNotVerifiedError(error)) {
+    return "Email not verified. Please verify your email before logging in.";
+  }
+
   if (error === "BackendUnavailable") {
     return "Login service is unavailable. Please try again shortly.";
   }
@@ -53,6 +57,13 @@ function getLoginErrorMessage(error: string | null): string {
   return "";
 }
 
+function isEmailNotVerifiedError(error?: string | null): boolean {
+  return (
+    error === "EmailNotVerified" ||
+    Boolean(error?.toLowerCase().includes("email not verified"))
+  );
+}
+
 export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -62,11 +73,19 @@ export default function SignIn() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   useEffect(() => {
-    const message = getLoginErrorMessage(
-      new URLSearchParams(window.location.search).get("error")
-    );
+    const searchParams = new URLSearchParams(window.location.search);
+    const error = searchParams.get("error");
+    const email = searchParams.get("email") || "";
+    const message = getLoginErrorMessage(error);
+
+    if (isEmailNotVerifiedError(error) && email) {
+      setUnverifiedEmail(email);
+      setFormData((current) => ({ ...current, email }));
+      window.sessionStorage.setItem("pendingVerificationEmail", email);
+    }
 
     if (message) {
       setErrors({ general: message });
@@ -78,6 +97,17 @@ export default function SignIn() {
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear field error on typing
     setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
+    if (name === "email") {
+      setUnverifiedEmail("");
+    }
+  };
+
+  const handleVerifyEmailRedirect = () => {
+    const email = unverifiedEmail || formData.email.trim();
+    if (!email) return;
+
+    window.sessionStorage.setItem("pendingVerificationEmail", email);
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
   function validate(data: FormData): boolean {
@@ -120,6 +150,23 @@ export default function SignIn() {
       });
 
       if (result?.error) {
+        if (isEmailNotVerifiedError(result.error)) {
+          window.sessionStorage.setItem(
+            "pendingVerificationEmail",
+            nextFormData.email
+          );
+          window.sessionStorage.setItem(
+            "pendingVerificationPassword",
+            nextFormData.password
+          );
+          setUnverifiedEmail(nextFormData.email);
+          setErrors({
+            general:
+              "Email not verified. Please verify your email before logging in.",
+          });
+          return;
+        }
+
         setErrors({ general: "Invalid email or password. Please try again." });
         return;
       }
@@ -159,19 +206,30 @@ export default function SignIn() {
 
           {/* General error banner */}
           {errors.general && (
-            <div className="mb-5 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-              <svg
-                className="h-4 w-4 shrink-0"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-5.25a.75.75 0 001.5 0v-4a.75.75 0 00-1.5 0v4zm.75-6.5a1 1 0 110 2 1 1 0 010-2z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {errors.general}
+            <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-5.25a.75.75 0 001.5 0v-4a.75.75 0 00-1.5 0v4zm.75-6.5a1 1 0 110 2 1 1 0 010-2z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {errors.general}
+              </div>
+              {unverifiedEmail && (
+                <button
+                  type="button"
+                  onClick={handleVerifyEmailRedirect}
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-[#22d3ee] px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#06b6d4]"
+                >
+                  Verify email
+                </button>
+              )}
             </div>
           )}
 
