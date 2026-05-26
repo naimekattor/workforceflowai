@@ -11,7 +11,7 @@ import {
   createStripeConnectOnboardingLink,
 } from "@/lib/api/billing";
 import { formatCurrency } from "@/lib/invoices";
-import { showError, showInfo } from "@/lib/ui/alerts";
+import { requireInfoConfirmation, showError } from "@/lib/ui/alerts";
 
 function formatPlanPrice(price: string) {
   const amount = Number.parseFloat(price);
@@ -30,10 +30,6 @@ function formatLimitValue(value: number | null) {
 
 function isPopularPlan(plan: Plan) {
   return plan.plan_type.toLowerCase() === "professional";
-}
-
-function planStorageKeys(plan: Plan) {
-  return [String(plan.id), plan.plan_type.toLowerCase(), plan.name.toLowerCase()];
 }
 
 const planLimitLabels: Array<{
@@ -93,19 +89,10 @@ async function redirectToSubscriptionCheckout(planId: number) {
 }
 
 export default function AccountPlans() {
-  const [currentPlanId, setCurrentPlanId] = useState("starter");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutPlanId, setCheckoutPlanId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const hasActivePlan = plans.some((plan) => plan.is_active);
-
-  useEffect(() => {
-    const savedPlan = localStorage.getItem("currentPlanId");
-    if (savedPlan) {
-      setCurrentPlanId(savedPlan);
-    }
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -149,10 +136,16 @@ export default function AccountPlans() {
       const profile = await getUserProfile();
 
       if (!profile.is_stripe_connect_connected) {
-        await showInfo(
-          "First you need to connect your Stripe account before subscribing.",
-          "Connect Stripe first"
-        );
+        const confirmed = await requireInfoConfirmation({
+          title: "Connect Stripe first",
+          text: "First you need to connect your Stripe account before subscribing.",
+          confirmButtonText: "OK",
+        });
+
+        if (!confirmed) {
+          return;
+        }
+
         await redirectToStripeOnboarding();
         return;
       }
@@ -201,9 +194,7 @@ export default function AccountPlans() {
           </div>
         ) : (
           plans.map((plan) => {
-            const isCurrent = hasActivePlan
-              ? plan.is_active
-              : planStorageKeys(plan).includes(currentPlanId.toLowerCase());
+            const isCurrent = plan.is_active;
             const popular = isPopularPlan(plan);
             const freePlan = isFreePlan(plan);
             const features =

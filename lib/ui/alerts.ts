@@ -50,6 +50,27 @@ export async function showInfo(text: string, title = "Notice") {
   await showAlert("info", { title, text });
 }
 
+export async function requireInfoConfirmation({
+  title = "Notice",
+  text,
+  confirmButtonText = "OK",
+}: AlertOptions): Promise<boolean> {
+  const Swal = await getSwal();
+
+  const result = await Swal.fire({
+    icon: "info",
+    title,
+    text,
+    confirmButtonText,
+    allowOutsideClick: true,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    customClass,
+  });
+
+  return result.isConfirmed;
+}
+
 export async function confirmAction({
   title = "Are you sure?",
   text,
