@@ -98,6 +98,7 @@ export default function AccountPlans() {
   const [loading, setLoading] = useState(true);
   const [checkoutPlanId, setCheckoutPlanId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const hasActivePlan = plans.some((plan) => plan.is_active);
 
   useEffect(() => {
     const savedPlan = localStorage.getItem("currentPlanId");
@@ -200,7 +201,9 @@ export default function AccountPlans() {
           </div>
         ) : (
           plans.map((plan) => {
-            const isCurrent = planStorageKeys(plan).includes(currentPlanId.toLowerCase());
+            const isCurrent = hasActivePlan
+              ? plan.is_active
+              : planStorageKeys(plan).includes(currentPlanId.toLowerCase());
             const popular = isPopularPlan(plan);
             const freePlan = isFreePlan(plan);
             const features =
