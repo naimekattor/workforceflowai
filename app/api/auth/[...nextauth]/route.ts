@@ -22,6 +22,18 @@ type LoginErrorResponse = {
   is_verified?: boolean;
 };
 
+type LoginResponse = {
+  access: string;
+  refresh: string;
+  user: {
+    id: number | string;
+    full_name: string;
+    email: string;
+    role: string;
+    is_profile_completed?: boolean;
+  };
+};
+
 export const authOptions: NextAuthOptions = {
   secret: AUTH_SECRET,
 
@@ -60,7 +72,7 @@ export const authOptions: NextAuthOptions = {
             );
           }
 
-          const data = await res.json();
+          const data = (await res.json()) as LoginResponse;
 
           // Return shape maps to the token callback below
           return {
@@ -70,6 +82,7 @@ export const authOptions: NextAuthOptions = {
             role: data.user.role,
             accessToken: data.access,
             refreshToken: data.refresh,
+            isProfileCompleted: data.user.is_profile_completed === true,
           };
         } catch (error: unknown) {
           throw new Error(error instanceof Error ? error.message : "Login failed");
@@ -80,12 +93,20 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     // Persist tokens into the JWT cookie
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
+        token.isProfileCompleted = user.isProfileCompleted;
+      }
+
+      if (
+        trigger === "update" &&
+        typeof session?.isProfileCompleted === "boolean"
+      ) {
+        token.isProfileCompleted = session.isProfileCompleted;
       }
 
       // TODO: Add token refresh logic here when access token expires
@@ -97,6 +118,10 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.id as string;
       session.user.role = token.role as string;
       session.accessToken = token.accessToken as string;
+      session.isProfileCompleted =
+        typeof token.isProfileCompleted === "boolean"
+          ? token.isProfileCompleted
+          : undefined;
       return session;
     },
   },

@@ -17,6 +17,7 @@ interface RegisterResponse {
     full_name: string;
     email: string;
     role: string;
+    is_profile_completed?: boolean;
   };
   access: string;
   refresh: string;
@@ -160,6 +161,7 @@ export async function POST(request: NextRequest) {
         role: data.user.role,
         accessToken: data.access,
         refreshToken: data.refresh,
+        isProfileCompleted: data.user.is_profile_completed === true,
       },
     });
 

@@ -6,6 +6,11 @@ export interface Plan {
   description: string;
   price: string;
   features: string[];
+  limits: {
+    customers: number | null;
+    quotes: number | null;
+    team: number | null;
+  };
   is_active: boolean;
   plan_type: string;
 }

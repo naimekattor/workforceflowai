@@ -62,7 +62,7 @@ function ReviewSection({ title, onEdit, rows }: ReviewSectionProps) {
 export default function Step6Review() {
   const router = useRouter();
   const { data } = useOnboarding();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const bt = data.businessType;
@@ -91,6 +91,7 @@ export default function Step6Review() {
 
     try {
       await createBusinessDetails(bt, buildBusinessDetailsFormData(data));
+      await update({ isProfileCompleted: true });
       router.push('/dashboard');
     } catch (error) {
       setSubmissionError(

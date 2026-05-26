@@ -18,6 +18,16 @@ function formatPlanPrice(price: string) {
   return formatCurrency(Number.isNaN(amount) ? 0 : amount);
 }
 
+function formatPlanLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatLimitValue(value: number | null) {
+  return value === null ? "Unlimited" : value.toLocaleString();
+}
+
 function isPopularPlan(plan: Plan) {
   return plan.plan_type.toLowerCase() === "professional";
 }
@@ -25,6 +35,15 @@ function isPopularPlan(plan: Plan) {
 function planStorageKeys(plan: Plan) {
   return [String(plan.id), plan.plan_type.toLowerCase(), plan.name.toLowerCase()];
 }
+
+const planLimitLabels: Array<{
+  key: keyof Plan["limits"];
+  label: string;
+}> = [
+  { key: "customers", label: "Customers" },
+  { key: "quotes", label: "Quotes" },
+  { key: "team", label: "Team members" },
+];
 
 function isFreePlan(plan: Plan) {
   const price = Number.parseFloat(plan.price);
@@ -186,6 +205,10 @@ export default function AccountPlans() {
             const freePlan = isFreePlan(plan);
             const features =
               plan.features.length > 0 ? plan.features : [plan.description || `${plan.name} Plan`];
+            const limits = planLimitLabels.map((limit) => ({
+              ...limit,
+              value: plan.limits[limit.key],
+            }));
 
             return (
               <div
@@ -226,10 +249,39 @@ export default function AccountPlans() {
                       className={`flex items-start gap-2 text-xs ${popular ? "text-white" : "text-slate-600"}`}
                     >
                       <CheckCircle2 className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${popular ? "text-cyan-100" : "text-emerald-500"}`} />
-                      {feature}
+                      {formatPlanLabel(feature)}
                     </li>
                   ))}
                 </ul>
+
+                <div className={`mb-6 rounded-lg border p-3 ${
+                  popular
+                    ? "border-white/30 bg-white/10"
+                    : "border-slate-200 bg-slate-50"
+                }`}>
+                  <p className={`mb-2 text-[11px] font-bold uppercase ${
+                    popular ? "text-cyan-50" : "text-slate-500"
+                  }`}>
+                    Limits
+                  </p>
+                  <div className="space-y-1.5">
+                    {limits.map((limit) => (
+                      <div
+                        key={limit.key}
+                        className={`flex items-center justify-between gap-3 text-xs ${
+                          popular ? "text-white" : "text-slate-600"
+                        }`}
+                      >
+                        <span>{limit.label}</span>
+                        <span className={`font-bold ${
+                          popular ? "text-white" : "text-slate-900"
+                        }`}>
+                          {formatLimitValue(limit.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 {isCurrent ? (
                   <button
@@ -242,9 +294,9 @@ export default function AccountPlans() {
                   <button
                     type="button"
                     onClick={() => choosePlan(plan)}
-                    disabled={freePlan || !plan.is_active || checkoutPlanId !== null}
+                    disabled={freePlan || checkoutPlanId !== null}
                     className={`mt-auto w-full py-2.5 rounded-lg text-xs font-bold transition-colors ${
-                      freePlan || !plan.is_active || checkoutPlanId !== null
+                      freePlan || checkoutPlanId !== null
                         ? "bg-slate-200 text-slate-500 cursor-not-allowed"
                         : popular
                         ? "bg-white text-cyan-600 hover:bg-slate-50"
@@ -255,9 +307,7 @@ export default function AccountPlans() {
                       ? "Starting..."
                       : freePlan
                       ? "Free Plan"
-                      : plan.is_active
-                      ? "Subscribe"
-                      : "Unavailable"}
+                      : "Subscribe"}
                   </button>
                 )}
               </div>

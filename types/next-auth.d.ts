@@ -8,6 +8,7 @@ declare module "next-auth" {
     role: string;
     accessToken: string;
     refreshToken: string;
+    isProfileCompleted?: boolean;
   }
 
   interface Session {
@@ -18,6 +19,7 @@ declare module "next-auth" {
       role: string;
     };
     accessToken: string;
+    isProfileCompleted?: boolean;
   }
 }
 
@@ -27,5 +29,6 @@ declare module "next-auth/jwt" {
     role: string;
     accessToken: string;
     refreshToken: string;
+    isProfileCompleted?: boolean;
   }
 }
