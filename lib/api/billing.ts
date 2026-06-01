@@ -34,6 +34,7 @@ export interface StripeConnectAccount {
 
 export interface StripeConnectOnboardingLinkPayload {
   refresh_url: string;
+  return_url?: string;
 }
 
 export interface StripeConnectOnboardingLinkResponse {
@@ -41,9 +42,105 @@ export interface StripeConnectOnboardingLinkResponse {
   expires_at: string;
 }
 
+export interface StripeConnectAccountSummary {
+  id: number;
+  display_name: string;
+  account_health: string;
+  is_primary: boolean;
+  is_active: boolean;
+  onboarding_complete: boolean;
+  is_connected: boolean;
+  is_ready_for_payments: boolean;
+  can_receive_payouts: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StripeConnectAccountsResponse {
+  count: number;
+  accounts: StripeConnectAccountSummary[];
+}
+
+export interface StripeConnectAccountActionPayload {
+  account_id: number;
+}
+
+export interface StripeConnectWalletResponse {
+  balance?: string | number;
+  available?: string | number;
+  available_balance?: string | number;
+  pending?: string | number;
+  pending_balance?: string | number;
+  currency?: string;
+  error?: string;
+  detail?: string;
+}
+
+export interface StripeConnectPayoutPayload {
+  payout_amount: string;
+}
+
+export interface StripeConnectActionResponse {
+  detail?: string;
+  error?: string;
+  message?: string;
+}
+
 export const getBillingHistory = async (): Promise<BillingHistoryResponse> => {
   const response = await apiClient.get<BillingHistoryResponse>(
     "/api/billing/history/"
+  );
+  return response.data;
+};
+
+export const getStripeConnectAccounts =
+  async (): Promise<StripeConnectAccountsResponse> => {
+    const response = await apiClient.get<StripeConnectAccountsResponse>(
+      "/api/billing/stripe/connect/accounts-list/"
+    );
+    return response.data;
+  };
+
+export const deleteStripeConnectAccount = async (
+  accountId: number
+): Promise<void> => {
+  await apiClient.delete(`/api/billing/stripe/connect/accounts/${accountId}/`);
+};
+
+export const setPrimaryStripeConnectAccount = async (
+  accountId: number
+): Promise<StripeConnectActionResponse> => {
+  const response = await apiClient.post<StripeConnectActionResponse>(
+    "/api/billing/stripe/connect/set-primary/",
+    { account_id: accountId }
+  );
+  return response.data;
+};
+
+export const turnActiveStripeConnectAccount = async (
+  accountId: number
+): Promise<StripeConnectActionResponse> => {
+  const response = await apiClient.post<StripeConnectActionResponse>(
+    "/api/billing/stripe/connect/turn-active/",
+    { account_id: accountId }
+  );
+  return response.data;
+};
+
+export const getStripeConnectWallet =
+  async (): Promise<StripeConnectWalletResponse> => {
+    const response = await apiClient.get<StripeConnectWalletResponse>(
+      "/api/billing/stripe/connect/wallet/"
+    );
+    return response.data;
+  };
+
+export const requestStripeConnectPayout = async (
+  payoutAmount: string
+): Promise<StripeConnectActionResponse> => {
+  const response = await apiClient.post<StripeConnectActionResponse>(
+    "/api/billing/stripe/connect/payout/",
+    { payout_amount: payoutAmount }
   );
   return response.data;
 };

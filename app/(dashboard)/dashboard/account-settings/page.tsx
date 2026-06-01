@@ -15,6 +15,7 @@ import {
   Save,
   Mail,
   Plus,
+  Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -29,6 +30,7 @@ import {
   UserProfile,
 } from '@/lib/api/business';
 import CollaboratorList from '@/components/dashboard/CollaboratorList';
+import WalletTab from '@/components/dashboard/WalletTab';
 import { BillingInfo, getBillingHistory } from '@/lib/api/billing';
 import { NotificationSettings, getNotificationSettings, updateNotificationSettings } from '@/lib/api/notifications';
 import { showError, showSuccess } from '@/lib/ui/alerts';
@@ -670,6 +672,17 @@ export default function AccountSettings() {
           Billing
         </button>
         <button
+          onClick={() => setActiveTab('wallet')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
+            activeTab === 'wallet'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Wallet className="w-4 h-4" />
+          Wallet
+        </button>
+        <button
           onClick={() => setActiveTab('notifications')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'notifications'
@@ -1251,6 +1264,8 @@ export default function AccountSettings() {
           </div>
         </div>
       )}
+
+      {activeTab === 'wallet' && <WalletTab />}
 
       {activeTab === 'notifications' && (
         <div className="space-y-6">

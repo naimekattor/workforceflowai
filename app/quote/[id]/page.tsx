@@ -6,9 +6,7 @@ import {
   StickyNote,
   User,
 } from "lucide-react";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getPublicCustomer, getPublicQuote } from "@/lib/api/public-quotes";
+import { getPublicQuote } from "@/lib/api/public-quotes";
 import { formatCurrency } from "@/lib/invoices";
 import QuoteDecisionButtons from "./QuoteDecisionButtons";
 
@@ -112,8 +110,7 @@ export default async function PublicQuotePage({
   params,
 }: PublicQuotePageProps) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
-  const result = await getPublicQuote(id, session?.accessToken);
+  const result = await getPublicQuote(id);
 
   if (!result.ok) {
     const message =
@@ -125,13 +122,7 @@ export default async function PublicQuotePage({
   }
 
   const { quote } = result;
-  const customerResult = await getPublicCustomer(
-    quote.customer,
-    session?.accessToken
-  );
-  const customer = customerResult.ok ? customerResult.customer : null;
-  const customerLabel =
-    customer?.customer_name || quote.customer_name || "Customer";
+  const customerLabel = quote.customer_name || "Customer";
   const totalAmount = parseAmount(quote.total_price || quote.price);
 
   return (
@@ -222,8 +213,8 @@ export default async function PublicQuotePage({
               <DetailRow label="Customer" value={customerLabel} />
               <DetailRow
                 label="Email"
-                value={customer?.customer_email || "Not provided"}
-                muted={!customer?.customer_email}
+                value={quote.customer_email || "Not provided"}
+                muted={!quote.customer_email}
               />
               <DetailRow label="Quote Date" value={formatDate(quote.quote_date)} />
               <DetailRow

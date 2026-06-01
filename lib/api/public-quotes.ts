@@ -1,5 +1,4 @@
 import { buildApiUrl } from "./config";
-import type { Customer } from "./customers";
 import type { Quote } from "./quotes";
 
 type PublicQuoteResult =
@@ -8,10 +7,6 @@ type PublicQuoteResult =
 
 type PublicQuoteDecisionResult =
   | { ok: true; message?: string }
-  | { ok: false; status: number; message: string };
-
-type PublicCustomerResult =
-  | { ok: true; customer: Customer }
   | { ok: false; status: number; message: string };
 
 async function readErrorMessage(response: Response, fallback: string) {
@@ -43,17 +38,9 @@ async function readErrorMessage(response: Response, fallback: string) {
 }
 
 export async function getPublicQuote(
-  id: string | number,
-  accessToken?: string
+  id: string | number
 ): Promise<PublicQuoteResult> {
-  const headers = accessToken
-    ? {
-        Authorization: `Bearer ${accessToken}`,
-      }
-    : undefined;
-
-  const response = await fetch(buildApiUrl(`/api/quote/${id}/`), {
-    headers,
+  const response = await fetch(buildApiUrl(`/api/quote/details/${id}/`), {
     cache: "no-store",
   });
 
@@ -68,35 +55,6 @@ export async function getPublicQuote(
   return {
     ok: true,
     quote: (await response.json()) as Quote,
-  };
-}
-
-export async function getPublicCustomer(
-  id: string | number,
-  accessToken?: string
-): Promise<PublicCustomerResult> {
-  const headers = accessToken
-    ? {
-        Authorization: `Bearer ${accessToken}`,
-      }
-    : undefined;
-
-  const response = await fetch(buildApiUrl(`/api/customer/${id}/`), {
-    headers,
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      status: response.status,
-      message: await readErrorMessage(response, "Failed to load customer."),
-    };
-  }
-
-  return {
-    ok: true,
-    customer: (await response.json()) as Customer,
   };
 }
 

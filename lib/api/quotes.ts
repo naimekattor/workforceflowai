@@ -5,6 +5,7 @@ export interface Quote {
   owner: number;
   customer: number;
   customer_name?: string;
+  customer_email?: string;
   quote_status: string;
   quote_uuid: string;
   job_type: string;
