@@ -4,6 +4,7 @@ export interface Quote {
   id: number;
   owner: number;
   customer: number;
+  customer_id?: number;
   customer_name?: string;
   customer_email?: string;
   quote_status: string;

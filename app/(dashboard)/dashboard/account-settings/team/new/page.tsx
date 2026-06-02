@@ -11,6 +11,7 @@ import {
   CollaboratorWorkType,
   inviteCollaborator,
 } from "@/lib/api/collaborators";
+import { showError } from "@/lib/ui/alerts";
 
 type TeamMemberInput = {
   work_type: CollaboratorWorkType;
@@ -64,6 +65,11 @@ function formatApiError(error: unknown): string {
     const data = error.response.data;
 
     if (typeof data === "object" && data !== null) {
+      const message = "message" in data ? data.message : null;
+      if (typeof message === "string") {
+        return message;
+      }
+
       const detail = "detail" in data ? data.detail : null;
       if (typeof detail === "string") {
         return detail;
@@ -140,7 +146,9 @@ export default function AddTeamMember() {
       router.refresh();
     } catch (error) {
       console.error("Error adding team member:", error);
-      setSubmitError(formatApiError(error));
+      const message = formatApiError(error);
+      setSubmitError(message);
+      await showError(message);
     }
   };
 
@@ -170,11 +178,11 @@ export default function AddTeamMember() {
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
-        {submitError && (
+        {/* {submitError && (
           <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {submitError}
           </div>
-        )}
+        )} */}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">

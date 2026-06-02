@@ -598,10 +598,6 @@ export default function AccountSettings() {
     businessTypeKey === 'limited_company' || businessTypeKey === 'llp';
   const showLegacyBusinessSettings = false;
 
-  if (loading) {
-    return <div className="max-w-5xl mx-auto py-12 text-center text-slate-500">Loading settings...</div>;
-  }
-
   return (
     <div className="max-w-5xl mx-auto pb-24">
       {/* Header */}
@@ -708,7 +704,26 @@ export default function AccountSettings() {
 
       {activeTab === 'profile' && (
         <div className="space-y-6">
-          {!business ? (
+          {loading ? (
+            <div className="space-y-6" aria-label="Loading business profile">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div
+                  key={index}
+                  className="animate-pulse rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="mb-6 h-4 w-36 rounded bg-slate-200" />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {Array.from({ length: 4 }, (_, fieldIndex) => (
+                      <div key={fieldIndex}>
+                        <div className="mb-2 h-3 w-24 rounded bg-slate-100" />
+                        <div className="h-10 rounded-lg bg-slate-100" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !business ? (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center text-sm text-slate-500">
               No business details found for {businessTypeLabel}.
             </div>
@@ -1323,7 +1338,12 @@ export default function AccountSettings() {
         <div className="fixed bottom-0 left-64 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-200 flex justify-end z-10">
           <button 
             onClick={handleSave}
-            disabled={isSaving || (activeTab === 'notifications' && !notificationSettings)}
+            disabled={
+              isSaving ||
+              loading ||
+              ((activeTab === 'profile' || activeTab === 'tax') && !business) ||
+              (activeTab === 'notifications' && !notificationSettings)
+            }
             className="flex items-center gap-2 px-6 py-2.5 bg-[#22d3ee] hover:bg-[#06b6d4] text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:bg-slate-300"
           >
             {isSaving ? 'Saving...' : (

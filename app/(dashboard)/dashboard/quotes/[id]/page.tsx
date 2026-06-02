@@ -56,6 +56,10 @@ function getStatusClassName(status: string) {
   return 'bg-slate-100 text-slate-700';
 }
 
+function getQuoteCustomerId(quote: Quote) {
+  return quote.customer ?? quote.customer_id;
+}
+
 function DetailRow({
   label,
   value,
@@ -106,13 +110,16 @@ export default function QuoteDetails() {
 
         setQuote(quoteData);
 
-        try {
-          const customerData = await getCustomer(quoteData.customer);
-          if (isMounted) {
-            setCustomer(customerData);
+        const customerId = getQuoteCustomerId(quoteData);
+        if (customerId !== undefined && customerId !== null) {
+          try {
+            const customerData = await getCustomer(customerId);
+            if (isMounted) {
+              setCustomer(customerData);
+            }
+          } catch (customerError) {
+            console.error('Error fetching quote customer:', customerError);
           }
-        } catch (customerError) {
-          console.error('Error fetching quote customer:', customerError);
         }
       } catch (error) {
         console.error('Error fetching quote details:', error);
@@ -170,7 +177,13 @@ export default function QuoteDetails() {
     );
   }
 
-  const customerLabel = customer?.customer_name || quote.customer_name || `Customer ID: ${quote.customer}`;
+  const customerId = getQuoteCustomerId(quote);
+  const customerLabel =
+    customer?.customer_name ||
+    quote.customer_name ||
+    (customerId !== undefined && customerId !== null
+      ? `Customer ID: ${customerId}`
+      : 'Customer');
   const deposit = Number.parseFloat(quote.deposit || '0');
 
   return (
@@ -245,12 +258,12 @@ export default function QuoteDetails() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <DetailRow label="Customer" value={customerLabel} />
-            <DetailRow label="Customer ID" value={quote.customer} />
+            <DetailRow label="Customer ID" value={customerId ?? '-'} />
             <DetailRow label="Owner ID" value={quote.owner} />
             <DetailRow
               label="Customer Email"
-              value={customer?.customer_email || 'Not included in quote response'}
-              muted={!customer?.customer_email}
+              value={customer?.customer_email || quote.customer_email || 'Not included in quote response'}
+              muted={!customer?.customer_email && !quote.customer_email}
             />
           </div>
         </div>
