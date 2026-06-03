@@ -96,11 +96,20 @@ function formatMoney(
 }
 
 function availableBalance(wallet: StripeConnectWalletResponse | null) {
-  return wallet?.available_balance ?? wallet?.available ?? wallet?.balance;
+  return (
+    wallet?.wallet?.available ??
+    wallet?.available_balance ??
+    wallet?.available ??
+    wallet?.balance
+  );
 }
 
 function pendingBalance(wallet: StripeConnectWalletResponse | null) {
-  return wallet?.pending_balance ?? wallet?.pending;
+  return wallet?.wallet?.pending ?? wallet?.pending_balance ?? wallet?.pending;
+}
+
+function walletCurrency(wallet: StripeConnectWalletResponse | null) {
+  return wallet?.wallet?.currency ?? wallet?.currency;
 }
 
 function billingStatusClassName(status: string) {
@@ -311,9 +320,13 @@ export default function WalletTab() {
       setPayoutAmount("");
       await Promise.all([loadWallet(), loadHistory()]);
     } catch (error) {
-      await showError(
-        getApiErrorMessage(error, "Failed to submit the withdrawal request.")
-      );
+      const errorMessage = 
+        error?.error?.non_field_errors?.[0] || 
+        error?.response?.data?.error?.non_field_errors?.[0] || 
+        error?.message || 
+        "Failed to submit the withdrawal request.";
+
+      await showError(errorMessage);
     } finally {
       setPayoutLoading(false);
     }
@@ -347,12 +360,12 @@ export default function WalletTab() {
           ) : (
             <>
               <p className="mb-1 text-3xl font-bold text-slate-900">
-                {formatMoney(availableBalance(wallet), wallet?.currency)}
+                {formatMoney(availableBalance(wallet), walletCurrency(wallet))}
               </p>
               <p className="text-xs text-slate-500">Available to withdraw</p>
               {pendingBalance(wallet) !== undefined && (
                 <p className="mt-4 text-xs font-medium text-slate-600">
-                  Pending: {formatMoney(pendingBalance(wallet), wallet?.currency)}
+                  Pending: {formatMoney(pendingBalance(wallet), walletCurrency(wallet))}
                 </p>
               )}
             </>

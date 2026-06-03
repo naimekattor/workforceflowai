@@ -6,10 +6,7 @@ import Link from "next/link";
 import { isAxiosError } from "axios";
 import { getUserProfile } from "@/lib/api/business";
 import { createPlanPurchaseCheckout, getPlans, Plan } from "@/lib/api/plans";
-import {
-  createStripeConnectAccount,
-  createStripeConnectOnboardingLink,
-} from "@/lib/api/billing";
+import { createStripeConnectOnboardingLink } from "@/lib/api/billing";
 import { formatCurrency } from "@/lib/invoices";
 import { requireInfoConfirmation, showError } from "@/lib/ui/alerts";
 
@@ -65,9 +62,11 @@ function getCheckoutErrorMessage(error: unknown) {
 }
 
 async function redirectToStripeOnboarding() {
-  await createStripeConnectAccount();
   const onboardingLink = await createStripeConnectOnboardingLink({
-    refresh_url: `${window.location.origin}/dashboard`,
+    refresh_url:
+      "http://localhost:3000/dashboard/account-settings/plans/payment-failed",
+    return_url:
+      "http://localhost:3000/dashboard/account-settings/plans/payment-success",
   });
 
   if (!onboardingLink.url) {

@@ -6,12 +6,14 @@ import { acceptPublicQuote, rejectPublicQuote } from "@/lib/api/public-quotes";
 
 type QuoteDecisionButtonsProps = {
   quoteId: number;
+  quoteStatus?: string;
 };
 
 type Decision = "accept" | "reject";
 
 export default function QuoteDecisionButtons({
   quoteId,
+  quoteStatus,
 }: QuoteDecisionButtonsProps) {
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [completedDecision, setCompletedDecision] = useState<Decision | null>(
@@ -50,6 +52,34 @@ export default function QuoteDecisionButtons({
       setPendingDecision(null);
     }
   };
+
+  const normalizedQuoteStatus = quoteStatus?.trim().toLowerCase();
+
+  if (
+    normalizedQuoteStatus === "accepted" ||
+    normalizedQuoteStatus === "rejected" ||
+    normalizedQuoteStatus === "paid"
+  ) {
+    const isPositiveStatus =
+      normalizedQuoteStatus === "accepted" || normalizedQuoteStatus === "paid";
+
+    return (
+      <div
+        className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-bold shadow-sm ${
+          isPositiveStatus
+            ? "bg-emerald-100 text-emerald-700"
+            : "border border-red-200 bg-white text-red-600"
+        }`}
+      >
+        {isPositiveStatus ? (
+          <CheckCircle2 className="h-4 w-4" />
+        ) : (
+          <XCircle className="h-4 w-4" />
+        )}
+        {quoteStatus}
+      </div>
+    );
+  }
 
   const isDisabled = Boolean(pendingDecision) || Boolean(completedDecision);
 

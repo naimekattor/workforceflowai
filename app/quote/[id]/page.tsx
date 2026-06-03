@@ -9,11 +9,14 @@ import {
 import { getPublicQuote } from "@/lib/api/public-quotes";
 import { formatCurrency } from "@/lib/invoices";
 import QuoteDecisionButtons from "./QuoteDecisionButtons";
+import QuotePaymentStatusModal from "./QuotePaymentStatusModal";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 type PublicQuotePageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ status?: string | string[] }>;
 };
 
 function formatDate(value?: string) {
@@ -38,6 +41,10 @@ function formatDateTime(value?: string) {
 function parseAmount(value?: string) {
   const amount = Number.parseFloat(value || "0");
   return Number.isNaN(amount) ? 0 : amount;
+}
+
+function getSearchParamValue(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function DetailRow({
@@ -84,16 +91,16 @@ function PublicQuoteError({ message }: { message: string }) {
   return (
     <main className="min-h-screen bg-[#f8fafc] px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-8 flex justify-center">
+        <Link href="/">
           <Image
-            src="/images/workforceflowailogo1.png"
+            src="/images/workforceflowailogo2.png"
             alt="WorkforceFlow AI"
             width={210}
             height={80}
             className="h-auto w-52 object-contain"
             priority
           />
-        </div>
+        </Link>
 
         <div className="rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
           <h1 className="mb-2 text-xl font-bold text-slate-900">
@@ -108,8 +115,10 @@ function PublicQuoteError({ message }: { message: string }) {
 
 export default async function PublicQuotePage({
   params,
+  searchParams,
 }: PublicQuotePageProps) {
   const { id } = await params;
+  const { status } = await searchParams;
   const result = await getPublicQuote(id);
 
   if (!result.ok) {
@@ -122,22 +131,25 @@ export default async function PublicQuotePage({
   }
 
   const { quote } = result;
+  console.log("Fetched quote:", quote);
   const customerLabel = quote.customer_name || "Customer";
   const totalAmount = parseAmount(quote.total_price || quote.price);
+  const paymentStatus = getSearchParamValue(status);
 
   return (
     <main className="min-h-screen bg-[#f8fafc] px-4 py-6 sm:px-6 lg:py-10">
+      <QuotePaymentStatusModal status={paymentStatus} />
       <div className="mx-auto max-w-6xl">
-        <header className="mb-8 flex">
+        <Link href="/" className="mb-8 flex">
           <Image
-            src="/images/workforceflowailogo1.png"
+            src="/images/workforceflowailogo2.png"
             alt="WorkforceFlow AI"
             width={220}
             height={85}
             className="h-auto w-52 object-contain"
             priority
           />
-        </header>
+        </Link>
 
         <section className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -159,7 +171,10 @@ export default async function PublicQuotePage({
               <p className="mb-4 text-3xl font-bold text-slate-900">
                 {totalAmount > 0 ? formatCurrency(totalAmount) : "-"}
               </p>
-              <QuoteDecisionButtons quoteId={quote.id} />
+              <QuoteDecisionButtons
+                quoteId={quote.id}
+                quoteStatus={quote.quote_status}
+              />
             </div>
           </div>
         </section>

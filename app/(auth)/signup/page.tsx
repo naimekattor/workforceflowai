@@ -190,7 +190,7 @@ export default function SignUp() {
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <Link href="/#hero">
-              <Image src="/images/workforceflowailogo1.png" alt="Revboostai logo" height={80} width={180} />
+              <Image src="/images/workforceflowailogo2.png" alt="Revboostai logo" height={80} width={180} />
             </Link>
           </div>
 

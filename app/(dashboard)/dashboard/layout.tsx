@@ -68,7 +68,7 @@ export default function DashboardLayout({
         </button>
         <Link href="/#hero" onClick={closeMobileMenu}>
           <Image
-            src="/images/workforceflowailogo1.png"
+            src="/images/workforceflowailogo2.png"
             alt="Revoostai logo"
             width={180}
             height={100}
@@ -101,7 +101,7 @@ export default function DashboardLayout({
             onClick={closeMobileMenu}
           >
             <Image
-              src="/images/workforceflowailogo1.png"
+              src="/images/workforceflowailogo2.png"
               alt="Revoostai logo"
               fill
               className="object-contain"

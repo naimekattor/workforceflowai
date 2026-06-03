@@ -15,6 +15,10 @@ export interface BillingHistoryResponse {
   results: BillingInfo[];
 }
 
+export interface BillingVatRateResponse {
+  vat_rate: number;
+}
+
 export interface StripeConnectAccount {
   id: number;
   stripe_account_id: string;
@@ -66,12 +70,20 @@ export interface StripeConnectAccountActionPayload {
 }
 
 export interface StripeConnectWalletResponse {
+  wallet?: {
+    available?: string | number;
+    pending?: string | number;
+    total?: string | number;
+    currency?: string;
+  };
   balance?: string | number;
   available?: string | number;
   available_balance?: string | number;
   pending?: string | number;
   pending_balance?: string | number;
   currency?: string;
+  can_withdraw?: boolean;
+  withdraw_status?: string;
   error?: string;
   detail?: string;
 }
@@ -89,6 +101,13 @@ export interface StripeConnectActionResponse {
 export const getBillingHistory = async (): Promise<BillingHistoryResponse> => {
   const response = await apiClient.get<BillingHistoryResponse>(
     "/api/billing/history/"
+  );
+  return response.data;
+};
+
+export const getBillingVatRate = async (): Promise<BillingVatRateResponse> => {
+  const response = await apiClient.get<BillingVatRateResponse>(
+    "/api/billing/vat-rate/"
   );
   return response.data;
 };

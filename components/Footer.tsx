@@ -31,7 +31,7 @@ const Footer = () => {
   <Link href="/#hero" onClick={handleClick}>
     <div className="relative w-[180px] h-[80px]">
       <Image
-        src="/images/workforceflowailogo1.png"
+        src="/images/workforceflowailogo2.png"
         alt="Revoostai logo"
         fill
         sizes="(max-width: 768px) 120px, 180px"

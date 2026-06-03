@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
+import { getBillingVatRate } from '@/lib/api/billing';
 import { getCustomers, Customer } from '@/lib/api/customers';
 import { createQuote, createLineItem } from '@/lib/api/quotes';
 import { formatCurrency } from '@/lib/invoices';
@@ -78,6 +79,8 @@ export default function AddQuote() {
   const { data: session } = useSession();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [vatRate, setVatRate] = useState(20);
+  const [vatRateLoading, setVatRateLoading] = useState(true);
 
   const {
     register,
@@ -105,19 +108,31 @@ export default function AddQuote() {
   const watchItems = watch("items");
 
   useEffect(() => {
-    const fetchCustomersData = async () => {
-      try {
-        const data = await getCustomers();
-        setCustomers(data.results);
-      } catch (error) {
-        console.error('Error fetching customers:', error);
-      } finally {
-        setLoading(false);
+    const fetchQuoteFormData = async () => {
+      const [customersResult, vatRateResult] = await Promise.allSettled([
+        getCustomers(),
+        getBillingVatRate(),
+      ]);
+
+      if (customersResult.status === 'fulfilled') {
+        setCustomers(customersResult.value.results);
+      } else {
+        console.error('Error fetching customers:', customersResult.reason);
       }
+
+      if (vatRateResult.status === 'fulfilled') {
+        const nextVatRate = vatRateResult.value.vat_rate;
+        setVatRate(Number.isFinite(nextVatRate) ? nextVatRate : 20);
+      } else {
+        console.error('Error fetching VAT rate:', vatRateResult.reason);
+      }
+
+      setLoading(false);
+      setVatRateLoading(false);
     };
 
     if (session?.accessToken) {
-      fetchCustomersData();
+      fetchQuoteFormData();
     }
   }, [session]);
 
@@ -170,7 +185,7 @@ export default function AddQuote() {
       const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
       subtotal += lineTotal;
       if (item.is_taxable) {
-        vat += lineTotal * 0.2;
+        vat += lineTotal * (vatRate / 100);
       }
     });
     
@@ -383,7 +398,9 @@ export default function AddQuote() {
                     {...register(`items.${index}.is_taxable` as const)}
                     className="w-4 h-4 text-[#22d3ee] bg-[#f4f6f8] border-slate-300 rounded focus:ring-[#22d3ee]" 
                   />
-                  <span className="text-[13px] font-bold text-slate-700">Taxable (20% VAT)</span>
+                  <span className="text-[13px] font-bold text-slate-700">
+                    Taxable ({vatRateLoading ? '...' : vatRate}% VAT)
+                  </span>
                 </label>
                 <div className="text-right">
                   <span className="text-[15px] font-bold text-slate-900">
@@ -402,7 +419,7 @@ export default function AddQuote() {
                 <span className="font-bold text-slate-900">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-[13px]">
-                <span className="text-slate-500">VAT (20%):</span>
+                <span className="text-slate-500">VAT ({vatRateLoading ? '...' : vatRate}%):</span>
                 <span className="font-bold text-slate-900">{formatCurrency(vat)}</span>
               </div>
               <div className="pt-3 mt-1 flex justify-between items-center">

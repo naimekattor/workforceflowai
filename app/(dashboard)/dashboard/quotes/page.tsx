@@ -93,8 +93,13 @@ export default function Quotes() {
       
       closeSendModal();
     } catch (error) {
+      const errorMessage = 
+      error?.response?.data?.message || 
+      error?.response?.data?.detail || 
+      error?.message || 
+      "Something went wrong!";
       console.error('Error sending quote email:', error);
-      await showError('Failed to send quote email');
+      await showError(errorMessage);
     } finally {
       setIsSending(false);
     }

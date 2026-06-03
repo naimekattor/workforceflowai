@@ -30,13 +30,16 @@ function getCustomerCreateError(error: unknown): string {
   ) {
     const data = error.response.data;
 
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "detail" in data &&
-      typeof data.detail === "string"
-    ) {
-      return data.detail;
+    if (typeof data === "object" && data !== null) {
+      // 1. Check for the new "message" format
+      if ("message" in data && typeof data.message === "string") {
+        return data.message;
+      }
+
+      // 2. Keep your existing "detail" format as a fallback
+      if ("detail" in data && typeof data.detail === "string") {
+        return data.detail;
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import apiClient from "./axios";
 export interface Quote {
   id: number;
   owner: number;
+  owner_name?: string;
   customer: number;
   customer_id?: number;
   customer_name?: string;

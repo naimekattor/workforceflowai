@@ -33,37 +33,22 @@ import CollaboratorList from '@/components/dashboard/CollaboratorList';
 import WalletTab from '@/components/dashboard/WalletTab';
 import { BillingInfo, getBillingHistory } from '@/lib/api/billing';
 import { NotificationSettings, getNotificationSettings, updateNotificationSettings } from '@/lib/api/notifications';
+import { getPlans, Plan as ApiPlan } from '@/lib/api/plans';
 import { showError, showSuccess } from '@/lib/ui/alerts';
 
-type Plan = {
-  id: string;
+type DisplayPlan = {
   name: string;
   subtitle: string;
   price: string;
   customers: string;
   quotes: string;
   teamMembers: string;
-  features: string[];
-  popular?: boolean;
 };
 
 type BusinessToggleField =
   | 'is_vat_registered'
   | 'is_cis_registered'
   | 'is_paye_registered';
-
-const plans: Plan[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    subtitle: 'For growing trade teams',
-    price: '£29',
-    customers: 'Up to 500',
-    quotes: 'Unlimited',
-    teamMembers: 'Up to 5',
-    features: [],
-  },
-];
 
 const notificationRows = [
   {
@@ -401,6 +386,65 @@ function getBillingStatusClassName(status: string) {
   return 'text-slate-500';
 }
 
+const loadingPlan: DisplayPlan = {
+  name: 'Loading',
+  subtitle: 'Fetching subscription details',
+  price: '-',
+  customers: '-',
+  quotes: '-',
+  teamMembers: '-',
+};
+
+const fallbackPlan: DisplayPlan = {
+  name: 'No Active',
+  subtitle: 'No active subscription found',
+  price: '-',
+  customers: '-',
+  quotes: '-',
+  teamMembers: '-',
+};
+
+function formatPlanPrice(price: string) {
+  const amount = Number.parseFloat(price);
+
+  if (Number.isNaN(amount)) {
+    return price || '-';
+  }
+
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+function formatPlanLimit(value: number | null | undefined) {
+  if (value === undefined) return '-';
+  if (value === null) return 'Unlimited';
+  if (value === 0) return '0';
+
+  return `Up to ${value.toLocaleString()}`;
+}
+
+function toDisplayPlan(plan: ApiPlan | undefined): DisplayPlan {
+  if (!plan) {
+    return fallbackPlan;
+  }
+
+  return {
+    name: plan.name,
+    subtitle: plan.description || plan.plan_type,
+    price: formatPlanPrice(plan.price),
+    customers: formatPlanLimit(plan.limits?.customers),
+    quotes: formatPlanLimit(plan.limits?.quotes),
+    teamMembers: formatPlanLimit(plan.limits?.team),
+  };
+}
+
+function getCurrentPlan(plans: ApiPlan[]) {
+  return toDisplayPlan(plans.find((plan) => plan.is_active) || plans[0]);
+}
+
 export default function AccountSettings() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState('profile');
@@ -417,9 +461,11 @@ export default function AccountSettings() {
     useState(true);
   const [notificationSettingsError, setNotificationSettingsError] =
     useState('');
+  const [plans, setPlans] = useState<ApiPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState('');
 
-  const [currentPlanId] = useState('starter');
-  const currentPlan = plans.find((plan) => plan.id === currentPlanId) || plans[0];
+  const currentPlan = plansLoading ? loadingPlan : getCurrentPlan(plans);
   const [timezone, setTimezone] = useState('Europe/London');
   const [dateFormat, setDateFormat] = useState('');
   const [currency, setCurrency] = useState('GBP');
@@ -445,6 +491,43 @@ export default function AccountSettings() {
       fetchData();
     }
   }, [session]);
+
+  useEffect(() => {
+    if (!session?.accessToken) {
+      setPlansLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchPlans = async () => {
+      try {
+        setPlansLoading(true);
+        setPlansError('');
+        const data = await getPlans();
+
+        if (isMounted) {
+          setPlans(Array.isArray(data.results) ? data.results : []);
+        }
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+        if (isMounted) {
+          setPlans([]);
+          setPlansError('Failed to load plan details');
+        }
+      } finally {
+        if (isMounted) {
+          setPlansLoading(false);
+        }
+      }
+    };
+
+    fetchPlans();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.accessToken]);
 
   useEffect(() => {
     if (!session?.accessToken) {
@@ -1181,6 +1264,12 @@ export default function AccountSettings() {
               <CreditCard className="w-5 h-5 text-blue-500" />
               <h2 className="text-[15px] font-bold text-slate-900">Current Subscription</h2>
             </div>
+
+            {plansError && (
+              <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-600">
+                {plansError}
+              </div>
+            )}
             
             <div className="bg-[#f0fdfa] border border-[#ccfbf1] rounded-xl p-6 mb-6">
               <div className="flex justify-between items-start mb-6">

@@ -219,7 +219,7 @@ export default function Dashboard() {
                     {customerName && <p className="text-xs text-slate-500 mt-0.5">{customerName}</p>}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(quote.total_price || 0))}</p>
+                    <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(quote.price || 0))}</p>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium mt-1 ${
                       quote.quote_status === 'Accepted' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
                     }`}>

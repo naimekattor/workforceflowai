@@ -47,7 +47,7 @@ const Navbar = () => {
           <div className="flex justify-between items-center h-20">
 <Link href="/#hero" onClick={handleClick}>
   <Image
-    src="/images/workforceflowailogo1.png"
+    src="/images/workforceflowailogo2.png"
     alt="Revoostai logo"
     width={180}
     height={100}

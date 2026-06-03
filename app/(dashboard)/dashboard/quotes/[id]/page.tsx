@@ -205,7 +205,7 @@ export default function QuoteDetails() {
           </div>
         </div>
 
-        <button
+        {/* <button
           type="button"
           onClick={handleCheckout}
           disabled={checkoutLoading}
@@ -213,7 +213,7 @@ export default function QuoteDetails() {
         >
           {checkoutLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
           Pay Deposit / Checkout
-        </button>
+        </button> */}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -258,8 +258,8 @@ export default function QuoteDetails() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <DetailRow label="Customer" value={customerLabel} />
-            <DetailRow label="Customer ID" value={customerId ?? '-'} />
-            <DetailRow label="Owner ID" value={quote.owner} />
+            {/* <DetailRow label="Customer ID" value={customerId ?? '-'} /> */}
+            <DetailRow label="Owner Name" value={quote.owner_name} />
             <DetailRow
               label="Customer Email"
               value={customer?.customer_email || quote.customer_email || 'Not included in quote response'}

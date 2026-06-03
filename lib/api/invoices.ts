@@ -27,7 +27,7 @@ export const getInvoices = async (page = 1, search?: string): Promise<InvoiceLis
   return response.data;
 };
 
-export const getInvoiceDetail = async (id: number | string): Promise<any> => {
+export const getInvoiceDetail = async (id: number | string): Promise<unknown> => {
   const response = await apiClient.get(`/api/invoice/detail/${id}/`);
   return response.data;
 };

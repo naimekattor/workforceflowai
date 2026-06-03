@@ -28,7 +28,7 @@ export default function PaymentFailed() {
 
         <div className="space-y-3">
           <Link
-            href="/dashboard/account-settings/plans"
+            href="/"
             className="w-full inline-flex justify-center items-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors duration-200"
           >
             Try Again

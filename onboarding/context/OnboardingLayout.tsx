@@ -21,7 +21,7 @@ export default function OnboardingLayout({ currentStep, children }: OnboardingLa
           {/* Logo & Headline */}
           <div className="flex flex-col items-center text-center mb-10 sm:mb-12">
             <Link href={"/#hero"}>
-            <Image width={180} height={80} src="/images/workforceflowailogo1.png" alt="workforceflowai Logo" className="h-[28px] sm:h-[34px] mb-6 object-contain" />
+            <Image width={180} height={80} src="/images/workforceflowailogo2.png" alt="workforceflowai Logo" className="h-[28px] sm:h-[34px] mb-6 object-contain" />
             </Link>
             <h1 className="text-[26px] sm:text-[32px] font-extrabold text-[#0f172a] mb-2 tracking-tight">Set Up Your Account</h1>
             <p className="text-[14px] sm:text-[15px] font-medium text-slate-500">Complete these steps to start using workforceflow AI</p>

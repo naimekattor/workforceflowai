@@ -260,7 +260,7 @@ export default function ForgotPassword() {
           <div className="flex justify-center mb-6">
             <Link href="/#hero">
               <Image
-                src="/images/workforceflowailogo1.png"
+                src="/images/workforceflowailogo2.png"
                 alt="Workforceflow ai logo"
                 height={80}
                 width={180}
