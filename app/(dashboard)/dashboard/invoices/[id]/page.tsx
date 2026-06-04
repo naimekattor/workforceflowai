@@ -151,7 +151,7 @@ export default function InvoiceDetails() {
     );
   }
 
-  const total = toAmount(invoice.total_price);
+  const total = toAmount(customer?.total_price);
   const subtotal = toAmount(customer?.subtotal_price);
   const vatTotal = total - subtotal;
   const quantity = customer?.quantity ?? "1.00";
