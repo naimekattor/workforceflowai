@@ -257,7 +257,7 @@ export default function Dashboard() {
                     {customerName && <p className="text-xs text-slate-500 mt-0.5">{customerName}</p>}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(invoice.total_price || 0))}</p>
+                    <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(invoice.price || 0))}</p>
                     <p className="text-[10px] text-slate-500 mt-1">Created {new Date(invoice.created_at).toLocaleDateString()}</p>
                   </div>
                 </Link>
