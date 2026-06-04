@@ -36,6 +36,7 @@ export interface LineItem {
   description: string;
   quantity: number;
   unit_price: string;
+  vat_rate?: number;
   total_price: string;
 }
 
