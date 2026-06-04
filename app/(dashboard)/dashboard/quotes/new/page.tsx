@@ -163,7 +163,8 @@ export default function AddQuote() {
           quote: newQuote.id,
           description: item.description,
           quantity: item.quantity,
-          unit_price: item.unit_price.toString()
+          unit_price: item.unit_price.toString(),
+          vat_rate:vatRate,
         })
       );
       
