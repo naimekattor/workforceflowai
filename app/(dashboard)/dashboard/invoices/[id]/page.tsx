@@ -9,6 +9,13 @@ import { Customer, getCustomer } from "@/lib/api/customers";
 import { getRecentInvoices, RecentInvoice } from "@/lib/api/dashboard";
 import { formatCurrency } from "@/lib/invoices";
 
+type InvoiceCustomer = Customer & {
+  total_price?: string | number;
+  subtotal_price?: string | number;
+  vat_percentage?: string | number;
+  quantity?: string | number;
+};
+
 function formatDate(value?: string) {
   if (!value) {
     return "-";
@@ -48,7 +55,7 @@ export default function InvoiceDetails() {
   const { id } = useParams<{ id: string }>();
   const { data: session, status } = useSession();
   const [invoice, setInvoice] = useState<RecentInvoice | null>(null);
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customer, setCustomer] = useState<InvoiceCustomer | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -145,8 +152,10 @@ export default function InvoiceDetails() {
   }
 
   const total = toAmount(invoice.total_price);
-  const subtotal = customer.subtotal_price;
-  const vatTotal = toAmount(invoice.total_price) - customer.subtotal_price;
+  const subtotal = toAmount(customer?.subtotal_price);
+  const vatTotal = total - subtotal;
+  const quantity = customer?.quantity ?? "1.00";
+  const vatPercentage = customer?.vat_percentage ?? 0;
   const customerName = customer?.customer_name || `Customer ${invoice.customer}`;
   const customerAddress =
     customer?.billing_address || customer?.site_address || "Address not provided";
@@ -275,11 +284,11 @@ export default function InvoiceDetails() {
                 <td className="px-3 py-2 border-b border-slate-200">
                   Invoice generated from accepted quote
                 </td>
-                <td className="px-3 py-2 text-right border-b border-slate-200">{customer?.quantity}</td>
+                <td className="px-3 py-2 text-right border-b border-slate-200">{quantity}</td>
                 <td className="px-3 py-2 text-right border-b border-slate-200">
                   {formatCurrency(subtotal)}
                 </td>
-                <td className="px-3 py-2 text-right border-b border-slate-200">{customer?.vat_percentage}%</td>
+                <td className="px-3 py-2 text-right border-b border-slate-200">{vatPercentage}%</td>
                 <td className="px-3 py-2 text-right border-b border-slate-200">
                   {formatCurrency(total)}
                 </td>
