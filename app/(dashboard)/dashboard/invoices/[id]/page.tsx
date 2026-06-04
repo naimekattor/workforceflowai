@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/invoices";
 type InvoiceCustomer = Customer & {
   total_price?: string | number;
   subtotal_price?: string | number;
-  vat_percentage?: string | number;
+  vat_rate?: string | number;
   quantity?: string | number;
 };
 
@@ -155,7 +155,7 @@ export default function InvoiceDetails() {
   const subtotal = toAmount(customer?.subtotal_price);
   const vatTotal = total - subtotal;
   const quantity = customer?.quantity ?? "1.00";
-  const vatPercentage = customer?.vat_percentage ?? 0;
+  const vatPercentage = customer?.vat_rate ?? 0;
   const customerName = customer?.customer_name || `Customer ${invoice.customer}`;
   const customerAddress =
     customer?.billing_address || customer?.site_address || "Address not provided";
@@ -223,12 +223,12 @@ export default function InvoiceDetails() {
       >
         <div className="flex items-start justify-between gap-8 mb-10 border-b border-slate-100 pb-6">
           <div>
-            <p className="text-xs font-bold text-slate-500 mb-2">Revboost AI</p>
+            <p className="text-xs font-bold text-slate-500 mb-2">Workforceflow AI</p>
             <h2 className="text-3xl font-bold text-slate-900">TAX INVOICE</h2>
           </div>
 
           <div className="text-right">
-            <p className="text-xl font-bold text-[#22d3ee]">revboostai</p>
+            <p className="text-xl font-bold text-[#22d3ee]">Workforceflow AI</p>
             <span className={`mt-3 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(invoice.quote_status)}`}>
               {invoice.quote_status}
             </span>
