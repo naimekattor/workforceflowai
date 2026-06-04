@@ -702,17 +702,8 @@ export default function AccountSettings() {
           </div>
         )}
         
-        {activeTab === 'team' ? (
-          <Link href="/dashboard/account-settings/team/new" className="flex items-center gap-2 bg-[#22d3ee] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#06b6d4] transition-colors shadow-sm">
-            <Plus className="w-4 h-4" />
-            Add Team Member
-          </Link>
-        ) : (
-          <button className="flex items-center gap-2 bg-[#e0f2fe] text-[#0284c7] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#bae6fd] transition-colors">
-            <Crown className="w-4 h-4" />
-            {/* {currentPlan.name} */}
-          </button>
-        )}
+       
+        
       </div>
 
       {/* Tabs */}
