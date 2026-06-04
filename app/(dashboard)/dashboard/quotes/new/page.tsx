@@ -8,16 +8,10 @@ import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
 import { getBillingVatRate } from '@/lib/api/billing';
 import { getCustomers, Customer } from '@/lib/api/customers';
+import { getJobs, Job } from '@/lib/api/jobs';
 import { createQuote, createLineItem } from '@/lib/api/quotes';
 import { formatCurrency } from '@/lib/invoices';
 import { showError, showInfo, showSuccess } from '@/lib/ui/alerts';
-
-const JOB_TYPE_OPTIONS = [
-  { value: 'No_Job', label: 'No Job' },
-  { value: 'Electrical', label: 'Electrical' },
-  { value: 'Plumbing', label: 'Plumbing' },
-  { value: 'Carpentry', label: 'Carpentry' },
-] as const;
 
 type LineItemInput = {
   description: string;
@@ -28,7 +22,7 @@ type LineItemInput = {
 
 type QuoteInput = {
   customer: string;
-  job_type: (typeof JOB_TYPE_OPTIONS)[number]['value'];
+  job_type: string;
   quote_date: string;
   valid_until: string;
   deposit: string;
@@ -42,6 +36,10 @@ function createQuoteNumber() {
   const year = date.getFullYear();
   const stamp = date.getTime().toString().slice(-6);
   return `QT-${year}-${stamp}`;
+}
+
+function getOpenJobs(jobs: Job[]) {
+  return jobs.filter((job) => job.jobstatus?.toLowerCase() === 'open');
 }
 
 function formatApiError(error: unknown): string {
@@ -78,6 +76,11 @@ export default function AddQuote() {
   const router = useRouter();
   const { data: session } = useSession();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobsPage, setJobsPage] = useState(1);
+  const [jobsHasMore, setJobsHasMore] = useState(false);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsLoadingMore, setJobsLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [vatRate, setVatRate] = useState(20);
   const [vatRateLoading, setVatRateLoading] = useState(true);
@@ -90,7 +93,7 @@ export default function AddQuote() {
     formState: { isSubmitting, errors },
   } = useForm<QuoteInput>({
     defaultValues: {
-      job_type: 'No_Job',
+      job_type: '',
       deposit: '0.00',
       payment_note: '',
       notes: '',
@@ -109,9 +112,10 @@ export default function AddQuote() {
 
   useEffect(() => {
     const fetchQuoteFormData = async () => {
-      const [customersResult, vatRateResult] = await Promise.allSettled([
+      const [customersResult, vatRateResult, jobsResult] = await Promise.allSettled([
         getCustomers(),
         getBillingVatRate(),
+        getJobs(1),
       ]);
 
       if (customersResult.status === 'fulfilled') {
@@ -127,14 +131,41 @@ export default function AddQuote() {
         console.error('Error fetching VAT rate:', vatRateResult.reason);
       }
 
+      if (jobsResult.status === 'fulfilled') {
+        setJobs(getOpenJobs(jobsResult.value.results));
+        setJobsPage(1);
+        setJobsHasMore(Boolean(jobsResult.value.next));
+      } else {
+        console.error('Error fetching jobs:', jobsResult.reason);
+        setJobs([]);
+        setJobsHasMore(false);
+      }
+
       setLoading(false);
       setVatRateLoading(false);
+      setJobsLoading(false);
     };
 
     if (session?.accessToken) {
       fetchQuoteFormData();
     }
   }, [session]);
+
+  const loadMoreJobs = async () => {
+    try {
+      setJobsLoadingMore(true);
+      const nextPage = jobsPage + 1;
+      const data = await getJobs(nextPage);
+      setJobs((previousJobs) => [...previousJobs, ...getOpenJobs(data.results)]);
+      setJobsPage(nextPage);
+      setJobsHasMore(Boolean(data.next));
+    } catch (error) {
+      console.error('Error loading more jobs:', error);
+      await showError('Failed to load more jobs.');
+    } finally {
+      setJobsLoadingMore(false);
+    }
+  };
 
   const onSubmit: SubmitHandler<QuoteInput> = async (data) => {
     if (!session?.accessToken) {
@@ -146,7 +177,7 @@ export default function AddQuote() {
       // 1. Create the quote
       const quoteData = {
         customer: parseInt(data.customer),
-        job_type: data.job_type,
+        job_post: Number(data.job_type),
         quote_date: data.quote_date,
         valid_until: data.valid_until,
         deposit: data.deposit || '0.00',
@@ -244,20 +275,38 @@ export default function AddQuote() {
             {/* Job Type */}
             <div>
               <label htmlFor="job_type" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-                Job Type *
+               Select Job *
               </label>
               <select
                 id="job_type"
                 {...register("job_type", { required: "Job type is required" })}
+                disabled={jobsLoading || jobs.length === 0}
                 className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 appearance-none"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
               >
-                {JOB_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                <option value="" disabled>
+                  {jobsLoading
+                    ? 'Loading jobs...'
+                    : jobs.length === 0
+                      ? 'No jobs available'
+                      : 'Select a job'}
+                </option>
+                {jobs.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title}
                   </option>
                 ))}
               </select>
+              {jobsHasMore && (
+                <button
+                  type="button"
+                  onClick={loadMoreJobs}
+                  disabled={jobsLoadingMore}
+                  className="mt-2 text-xs font-bold text-[#22d3ee] transition-colors hover:text-[#06b6d4] disabled:text-slate-400"
+                >
+                  {jobsLoadingMore ? 'Loading more...' : 'More'}
+                </button>
+              )}
               {errors.job_type && <p className="mt-1 text-xs text-red-500">{errors.job_type.message}</p>}
             </div>
 

@@ -11,6 +11,7 @@ export interface Quote {
   quote_status: string;
   quote_uuid: string;
   job_type: string;
+  job_post?: number;
   quote_date: string;
   valid_until: string;
   deposit: string;

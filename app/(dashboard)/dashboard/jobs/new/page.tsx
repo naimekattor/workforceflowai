@@ -160,7 +160,7 @@ export default function AddJob() {
             {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title.message}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="">
             <div>
               <label htmlFor="customer" className="block text-[13px] font-bold text-slate-800 mb-1.5">
                 Customer *
@@ -192,7 +192,7 @@ export default function AddJob() {
               {customerError && <p className="mt-1 text-xs text-red-500">{customerError}</p>}
             </div>
 
-            <div>
+            {/* <div>
               <label htmlFor="jobstatus" className="block text-[13px] font-bold text-slate-800 mb-1.5">
                 Status *
               </label>
@@ -207,7 +207,7 @@ export default function AddJob() {
                 <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
               {errors.jobstatus && <p className="mt-1 text-xs text-red-500">{errors.jobstatus.message}</p>}
-            </div>
+            </div> */}
           </div>
 
           <div>

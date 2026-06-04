@@ -131,7 +131,8 @@ export default function EditJob() {
   }, [id, reset, session?.accessToken, status]);
 
   const currentStatus = watch("jobstatus");
-  const hasCurrentStatusOption = currentStatus === "Open";
+  const hasCurrentStatusOption =
+    currentStatus === "Open" || currentStatus === "Closed";
   const hasSelectedCustomer = useMemo(() => {
     if (!job) {
       return true;
@@ -232,7 +233,7 @@ export default function EditJob() {
 
               <div>
                 <label htmlFor="jobstatus" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-                  Status *
+                  Status 
                 </label>
                 <div className="relative">
                   <select
@@ -241,6 +242,7 @@ export default function EditJob() {
                     className={selectClassName}
                   >
                     <option value="Open">Open</option>
+                    <option value="Closed">Closed</option>
                     {!hasCurrentStatusOption && currentStatus && (
                       <option value={currentStatus}>{currentStatus}</option>
                     )}
