@@ -15,7 +15,7 @@ export interface RecentQuote {
   customer: number;
   customer_name?: string;
   quote_status: string;
-  total_price: string | number;
+  price: string | number;
   created_at: string;
 }
 
@@ -26,7 +26,7 @@ export interface RecentInvoice {
   customer: number;
   customer_name?: string;
   quote_status: string;
-  price: string | number;
+  total_price: string | number;
   created_at: string;
 }
 
@@ -115,7 +115,7 @@ function toRecentInvoice(invoice: InvoiceListItem): RecentInvoice {
     customer: invoice.customer,
     customer_name: invoice.customer_name,
     quote_status: invoice.quote_status || invoice.status || "",
-    price: invoice.total_price ?? invoice.price ?? 0,
+    total_price: invoice.total_price ?? invoice.price ?? 0,
     created_at: invoice.created_at || invoice.issue_date || "",
   };
 }
