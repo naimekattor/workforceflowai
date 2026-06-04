@@ -34,6 +34,15 @@ function firstMessage(value: unknown): string | undefined {
   if (Array.isArray(value)) {
     return value.find((item): item is string => typeof item === "string");
   }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return (
+      firstMessage(record.non_field_errors) ||
+      firstMessage(record.message) ||
+      firstMessage(record.detail) ||
+      firstMessage(record.error)
+    );
+  }
   return undefined;
 }
 
@@ -320,13 +329,9 @@ export default function WalletTab() {
       setPayoutAmount("");
       await Promise.all([loadWallet(), loadHistory()]);
     } catch (error) {
-      const errorMessage = 
-        error?.error?.non_field_errors?.[0] || 
-        error?.response?.data?.error?.non_field_errors?.[0] || 
-        error?.message || 
-        "Failed to submit the withdrawal request.";
-
-      await showError(errorMessage);
+      await showError(
+        getApiErrorMessage(error, "Failed to submit the withdrawal request.")
+      );
     } finally {
       setPayoutLoading(false);
     }

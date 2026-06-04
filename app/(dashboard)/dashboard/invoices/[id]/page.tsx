@@ -144,9 +144,9 @@ export default function InvoiceDetails() {
     );
   }
 
-  const total = toAmount(customer.total_price);
-  const subtotal = customer.subtotal_price;
-  const vatTotal = subtotal * (customer.vat_percentage / 100);
+  const total = toAmount(invoice.total_price);
+  const subtotal = total;
+  const vatTotal = 0;
   const customerName = customer?.customer_name || `Customer ${invoice.customer}`;
   const customerAddress =
     customer?.billing_address || customer?.site_address || "Address not provided";
@@ -279,7 +279,7 @@ export default function InvoiceDetails() {
                 <td className="px-3 py-2 text-right border-b border-slate-200">
                   {formatCurrency(subtotal)}
                 </td>
-                <td className="px-3 py-2 text-right border-b border-slate-200">{customer.vat_percentage}%</td>
+                <td className="px-3 py-2 text-right border-b border-slate-200">0%</td>
                 <td className="px-3 py-2 text-right border-b border-slate-200">
                   {formatCurrency(subtotal)}
                 </td>

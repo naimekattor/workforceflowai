@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Eye, Edit, Trash2, Send, X } from 'lucide-react';
 import Link from 'next/link';
+import { isAxiosError } from 'axios';
 import { formatCurrency } from '@/lib/invoices';
 import { getQuotes, deleteQuote, sendQuoteEmail, Quote } from '@/lib/api/quotes';
 import { getCustomers, Customer } from '@/lib/api/customers';
@@ -93,11 +94,13 @@ export default function Quotes() {
       
       closeSendModal();
     } catch (error) {
-      const errorMessage = 
-      error?.response?.data?.message || 
-      error?.response?.data?.detail || 
-      error?.message || 
-      "Something went wrong!";
+      const errorMessage = isAxiosError<{ message?: string; detail?: string }>(error)
+        ? error.response?.data?.message ||
+          error.response?.data?.detail ||
+          error.message
+        : error instanceof Error
+        ? error.message
+        : "Something went wrong!";
       console.error('Error sending quote email:', error);
       await showError(errorMessage);
     } finally {
