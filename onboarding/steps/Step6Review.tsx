@@ -198,7 +198,7 @@ export default function Step6Review() {
               title="Preferences"
               onEdit={() => router.push('/onboarding/step-5')}
               rows={[
-                { label: 'Currency', value: data.currency },
+                { label: 'Currency', value: 'GBP' },
                 { label: 'Invoice Prefix', value: data.invoicePrefix },
                 { label: 'Payment Terms', value: `${data.paymentTermsDays} days` },
                 { label: 'Tax Display', value: data.taxDisplay === 'exclusive' ? 'Tax Exclusive' : 'Tax Inclusive' },
@@ -373,7 +373,7 @@ function appendCommonFields(formData: FormData, data: OnboardingData) {
   appendValue(formData, 'invoice_prefix', data.invoicePrefix);
   appendValue(formData, 'quote_number_format', data.quoteFormat);
   appendValue(formData, 'invoice_number_format', data.invoiceFormat);
-  appendValue(formData, 'currency', data.currency);
+  appendValue(formData, 'currency', 'GBP');
   appendValue(formData, 'tax_display', data.taxDisplay === 'inclusive' ? 'Inclusive' : 'Exclusive');
 
   if (data.logoFile) {

@@ -7,6 +7,7 @@ import { isAxiosError } from "axios";
 import { getUserProfile } from "@/lib/api/business";
 import { createPlanPurchaseCheckout, getPlans, Plan } from "@/lib/api/plans";
 import { createStripeConnectOnboardingLink } from "@/lib/api/billing";
+import { getStripeConnectOnboardingReturnUrls } from "@/lib/api/stripe-connect-urls";
 import { formatCurrency } from "@/lib/invoices";
 import { requireInfoConfirmation, showError } from "@/lib/ui/alerts";
 
@@ -62,12 +63,9 @@ function getCheckoutErrorMessage(error: unknown) {
 }
 
 async function redirectToStripeOnboarding() {
-  const onboardingLink = await createStripeConnectOnboardingLink({
-    refresh_url:
-      "http://localhost:3000/dashboard/account-settings/plans/payment-failed",
-    return_url:
-      "http://localhost:3000/dashboard/account-settings/plans/payment-success",
-  });
+  const onboardingLink = await createStripeConnectOnboardingLink(
+    getStripeConnectOnboardingReturnUrls()
+  );
 
   if (!onboardingLink.url) {
     throw new Error("Stripe onboarding response did not include a URL.");

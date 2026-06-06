@@ -71,7 +71,7 @@ export interface OnboardingData {
   invoicePrefix: string;
   quoteFormat: string;
   invoiceFormat: string;
-  currency: 'GBP' | 'USD' | 'EUR';
+  currency: 'GBP';
   taxDisplay: 'exclusive' | 'inclusive';
   paymentTermsDays: number;
 }

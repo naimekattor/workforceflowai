@@ -1,11 +1,13 @@
 // lib/api/axios.ts
 import axios, { AxiosHeaders } from "axios";
-import { getSession } from "next-auth/react";
+import { getSession, signOut } from "next-auth/react";
 import { getApiBaseUrl } from "./config";
 
 const apiClient = axios.create({
   baseURL: getApiBaseUrl(),
 });
+
+let isRedirectingToLogin = false;
 
 // Auto-attach Bearer token on every request
 apiClient.interceptors.request.use(async (config) => {
@@ -32,9 +34,25 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      typeof window !== "undefined" &&
+      !isRedirectingToLogin
+    ) {
+      isRedirectingToLogin = true;
+
+      try {
+        await signOut({ redirect: false });
+      } catch {
+        // Continue to login even if clearing the local session fails.
+      }
+
+      if (window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
+    } else if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        isRedirectingToLogin = true;
       }
     }
     return Promise.reject(error);

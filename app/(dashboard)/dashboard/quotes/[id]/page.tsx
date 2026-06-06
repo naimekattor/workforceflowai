@@ -6,7 +6,6 @@ import {
   Briefcase,
   CalendarDays,
   CreditCard,
-  Loader2,
   ReceiptText,
   StickyNote,
   User,
@@ -14,10 +13,10 @@ import {
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { getQuote, getStripeCheckoutUrl, Quote } from '@/lib/api/quotes';
+import { getQuote, Quote } from '@/lib/api/quotes';
 import { Customer, getCustomer } from '@/lib/api/customers';
+import { getJob, Job } from '@/lib/api/jobs';
 import { formatCurrency } from '@/lib/invoices';
-import { showError } from '@/lib/ui/alerts';
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (
@@ -60,6 +59,18 @@ function getQuoteCustomerId(quote: Quote) {
   return quote.customer ?? quote.customer_id;
 }
 
+function getQuoteJobId(quote: Quote) {
+  if (typeof quote.job_post === 'number') return quote.job_post;
+  return quote.job_post?.id;
+}
+
+function getQuoteJobTitle(quote: Quote, job: Job | null) {
+  const embeddedJobTitle =
+    typeof quote.job_post === 'object' && quote.job_post !== null ? quote.job_post.title : undefined;
+
+  return job?.title || embeddedJobTitle || quote.job_title || quote.job_type || 'No job';
+}
+
 function DetailRow({
   label,
   value,
@@ -85,9 +96,9 @@ export default function QuoteDetails() {
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -104,6 +115,7 @@ export default function QuoteDetails() {
         setLoading(true);
         setErrorMessage('');
         setCustomer(null);
+        setJob(null);
         const quoteData = await getQuote(id);
 
         if (!isMounted) return;
@@ -119,6 +131,18 @@ export default function QuoteDetails() {
             }
           } catch (customerError) {
             console.error('Error fetching quote customer:', customerError);
+          }
+        }
+
+        const jobId = getQuoteJobId(quoteData);
+        if (jobId !== undefined && jobId !== null) {
+          try {
+            const jobData = await getJob(jobId);
+            if (isMounted) {
+              setJob(jobData);
+            }
+          } catch (jobError) {
+            console.error('Error fetching quote job:', jobError);
           }
         }
       } catch (error) {
@@ -139,21 +163,6 @@ export default function QuoteDetails() {
       isMounted = false;
     };
   }, [id, session?.accessToken, status]);
-
-  const handleCheckout = async () => {
-    if (!quote) return;
-
-    try {
-      setCheckoutLoading(true);
-      const { checkout_url } = await getStripeCheckoutUrl(quote.id);
-      window.location.href = checkout_url;
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      await showError(getErrorMessage(error, 'Failed to initiate checkout. Please try again.'));
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -185,6 +194,7 @@ export default function QuoteDetails() {
       ? `Customer ID: ${customerId}`
       : 'Customer');
   const deposit = Number.parseFloat(quote.deposit || '0');
+  const jobTitle = getQuoteJobTitle(quote, job);
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
@@ -204,16 +214,6 @@ export default function QuoteDetails() {
             <p className="text-slate-500 text-sm">Quote #{quote.id} for {customerLabel}</p>
           </div>
         </div>
-
-        {/* <button
-          type="button"
-          onClick={handleCheckout}
-          disabled={checkoutLoading}
-          className="inline-flex w-fit items-center gap-2 bg-[#22d3ee] hover:bg-[#06b6d4] text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm disabled:bg-slate-300"
-        >
-          {checkoutLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-          Pay Deposit / Checkout
-        </button> */}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -231,7 +231,7 @@ export default function QuoteDetails() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <Briefcase className="w-4 h-4 text-slate-400 mb-3" />
-          <DetailRow label="Job Type" value={quote.job_type || 'No job'} />
+          <DetailRow label="Job Title" value={jobTitle} />
         </div>
       </div>
 
@@ -245,7 +245,7 @@ export default function QuoteDetails() {
             <DetailRow label="Invoice Number" value={quote.invoice_number} />
             <DetailRow label="Internal ID" value={quote.id} />
             <DetailRow label="Status" value={quote.quote_status} />
-            <DetailRow label="Job Type" value={quote.job_type || 'No job'} />
+            <DetailRow label="Job Title" value={jobTitle} />
             <DetailRow label="Created" value={formatDateTime(quote.created_at)} />
             <DetailRow label="Updated" value={formatDateTime(quote.updated_at)} />
           </div>

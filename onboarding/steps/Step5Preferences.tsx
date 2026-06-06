@@ -8,9 +8,7 @@ import { OnboardingCard, CardBody, CardFooter, Field, SelectField } from '../com
 import { useOnboarding } from '../context/OnboardingContext';
 
 const CURRENCIES = [
-  { id: 'GBP', label: 'GBP (£)', symbol: '£' },
-  { id: 'USD', label: 'USD ($)', symbol: '$' },
-  { id: 'EUR', label: 'EUR (€)', symbol: '€' },
+  { id: 'GBP', label: 'GBP - British Pound' },
 ] as const;
 
 const TAX_DISPLAY_OPTIONS = [

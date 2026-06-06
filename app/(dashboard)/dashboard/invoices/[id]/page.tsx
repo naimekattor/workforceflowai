@@ -269,7 +269,7 @@ export default function InvoiceDetails() {
         </div>
 
         <div className="overflow-x-auto mb-8">
-          <table className="w-full text-sm border border-slate-200">
+          <table className="w-full text-sm border text-black border-slate-200">
             <thead className="bg-slate-50">
               <tr>
                 <th className="text-left px-3 py-2 border-b border-slate-200">Description</th>
@@ -297,7 +297,7 @@ export default function InvoiceDetails() {
           </table>
         </div>
 
-        <div className="ml-auto w-full max-w-xs text-sm space-y-2 mb-10">
+        <div className="ml-auto w-full max-w-xs text-sm text-black space-y-2 mb-10">
           <div className="flex justify-between">
             <span className="text-slate-600">Subtotal</span>
             <span className="font-medium">{formatCurrency(subtotal)}</span>

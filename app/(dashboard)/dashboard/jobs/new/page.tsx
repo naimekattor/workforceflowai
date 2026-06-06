@@ -226,7 +226,7 @@ export default function AddJob() {
 
           <div>
             <label htmlFor="notes" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-              Notes (Optional)
+              Description
             </label>
             <textarea
               id="notes"

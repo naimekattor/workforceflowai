@@ -14,7 +14,6 @@ import {
   FileText,
   Save,
   Mail,
-  Plus,
   Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -155,10 +154,6 @@ const preferenceFields: BusinessField[] = [
     type: 'select',
     options: [
       { value: 'GBP', label: 'GBP - British Pound' },
-      { value: 'USD', label: 'USD - US Dollar' },
-      { value: 'EUR', label: 'EUR - Euro' },
-      { value: 'CAD', label: 'CAD - Canadian Dollar' },
-      { value: 'AUD', label: 'AUD - Australian Dollar' },
     ],
   },
   {
@@ -201,6 +196,8 @@ const readOnlyBusinessFields = new Set([
 ]);
 
 function getFieldValue(business: BusinessDetails | null, field: keyof BusinessDetails) {
+  if (field === 'currency') return 'GBP';
+
   const value = business?.[field];
   return value === null || value === undefined ? '' : String(value);
 }
@@ -213,6 +210,8 @@ function buildBusinessPayload(business: BusinessDetails): Partial<BusinessDetail
       payload[key] = value as string | number | boolean | null | undefined;
     }
   });
+
+  payload.currency = 'GBP';
 
   return payload as Partial<BusinessDetails>;
 }
@@ -445,6 +444,14 @@ function getCurrentPlan(plans: ApiPlan[]) {
   return toDisplayPlan(plans.find((plan) => plan.is_active) || plans[0]);
 }
 
+function cleanAccountSettingsWalletUrl() {
+  window.history.replaceState(
+    null,
+    '',
+    '/dashboard/account-settings?tab=wallet'
+  );
+}
+
 export default function AccountSettings() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState('profile');
@@ -470,6 +477,20 @@ export default function AccountSettings() {
   const [dateFormat, setDateFormat] = useState('');
   const [currency, setCurrency] = useState('GBP');
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+
+    if (typeof window === 'undefined') return;
+
+    window.history.replaceState(
+      null,
+      '',
+      tab === 'wallet'
+        ? '/dashboard/account-settings?tab=wallet'
+        : '/dashboard/account-settings'
+    );
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -477,7 +498,7 @@ export default function AccountSettings() {
       setProfile(userProfile);
       if (userProfile.usertype) {
         const businessData = await getBusinessDetails(userProfile.usertype);
-        setBusiness(businessData);
+        setBusiness({ ...businessData, currency: 'GBP' });
       }
     } catch (error) {
       console.error('Error fetching account settings:', error);
@@ -485,6 +506,28 @@ export default function AccountSettings() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const stripeStatus = params.get('stripe_status');
+
+    if (tab === 'wallet' || stripeStatus) {
+      setActiveTab('wallet');
+    }
+
+    if (stripeStatus === 'success') {
+      cleanAccountSettingsWalletUrl();
+      void showSuccess('Stripe account onboarding completed.');
+    } else if (stripeStatus === 'failed') {
+      cleanAccountSettingsWalletUrl();
+      void showError('Stripe account onboarding was not completed.');
+    } else if (tab === 'wallet') {
+      cleanAccountSettingsWalletUrl();
+    }
+  }, []);
 
   useEffect(() => {
     if (session?.accessToken) {
@@ -639,7 +682,7 @@ export default function AccountSettings() {
         profile.usertype,
         buildBusinessPayload(business)
       );
-      setBusiness(updatedBusiness);
+      setBusiness({ ...updatedBusiness, currency: 'GBP' });
       await showSuccess('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -709,7 +752,7 @@ export default function AccountSettings() {
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 bg-[#f4f6f8] rounded-lg p-1.5 mb-8 w-fit">
         <button
-          onClick={() => setActiveTab('profile')}
+          onClick={() => handleTabChange('profile')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'profile'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -720,7 +763,7 @@ export default function AccountSettings() {
           Business Profile
         </button>
         <button
-          onClick={() => setActiveTab('tax')}
+          onClick={() => handleTabChange('tax')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'tax'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -731,7 +774,7 @@ export default function AccountSettings() {
           Tax
         </button>
         <button
-          onClick={() => setActiveTab('billing')}
+          onClick={() => handleTabChange('billing')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'billing'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -742,7 +785,7 @@ export default function AccountSettings() {
           Billing
         </button>
         <button
-          onClick={() => setActiveTab('wallet')}
+          onClick={() => handleTabChange('wallet')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'wallet'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -753,7 +796,7 @@ export default function AccountSettings() {
           Wallet
         </button>
         <button
-          onClick={() => setActiveTab('notifications')}
+          onClick={() => handleTabChange('notifications')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'notifications'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -764,7 +807,7 @@ export default function AccountSettings() {
           Notifications
         </button>
         <button
-          onClick={() => setActiveTab('team')}
+          onClick={() => handleTabChange('team')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold transition-colors ${
             activeTab === 'team'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -986,16 +1029,7 @@ export default function AccountSettings() {
                   onChange={(e) => setCurrency(e.target.value)}
                   className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 cursor-pointer"
                 >
-                  <option value="GBP">GBP (£) - British Pound</option>
-                  <option value="EUR">EUR (€) - Euro</option>
-                  <option value="USD">USD ($) - US Dollar</option>
-                  <option value="CAD">CAD (C$) - Canadian Dollar</option>
-                  <option value="AUD">AUD (A$) - Australian Dollar</option>
-                  <option value="JPY">JPY (¥) - Japanese Yen</option>
-                  <option value="CHF">CHF (Fr) - Swiss Franc</option>
-                  <option value="SGD">SGD (S$) - Singapore Dollar</option>
-                  <option value="HKD">HKD (HK$) - Hong Kong Dollar</option>
-                  <option value="AED">AED (د.إ) - UAE Dirham</option>
+                  <option value="GBP">GBP - British Pound</option>
                 </select>
               </div>
             </div>

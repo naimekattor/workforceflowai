@@ -27,6 +27,7 @@ import {
   StripeConnectWalletResponse,
   turnActiveStripeConnectAccount,
 } from "@/lib/api/billing";
+import { getStripeConnectOnboardingReturnUrls } from "@/lib/api/stripe-connect-urls";
 import { confirmAction, showError, showSuccess } from "@/lib/ui/alerts";
 
 function firstMessage(value: unknown): string | undefined {
@@ -89,8 +90,7 @@ function formatDate(value?: string) {
 }
 
 function formatMoney(
-  value: string | number | null | undefined,
-  currency = "GBP"
+  value: string | number | null | undefined
 ) {
   if (value === null || value === undefined || value === "") return "-";
 
@@ -99,7 +99,7 @@ function formatMoney(
 
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: currency.toUpperCase(),
+    currency: "GBP",
     minimumFractionDigits: 2,
   }).format(amount);
 }
@@ -115,10 +115,6 @@ function availableBalance(wallet: StripeConnectWalletResponse | null) {
 
 function pendingBalance(wallet: StripeConnectWalletResponse | null) {
   return wallet?.wallet?.pending ?? wallet?.pending_balance ?? wallet?.pending;
-}
-
-function walletCurrency(wallet: StripeConnectWalletResponse | null) {
-  return wallet?.wallet?.currency ?? wallet?.currency;
 }
 
 function billingStatusClassName(status: string) {
@@ -240,11 +236,9 @@ export default function WalletTab() {
   const handleAddAccount = async () => {
     try {
       setAddingAccount(true);
-      const origin = window.location.origin;
-      const response = await createStripeConnectOnboardingLink({
-        refresh_url: `${origin}/dashboard/account-settings/plans/payment-failed`,
-        return_url: `${origin}/dashboard/account-settings/plans/payment-success`,
-      });
+      const response = await createStripeConnectOnboardingLink(
+        getStripeConnectOnboardingReturnUrls()
+      );
 
       if (!response.url) {
         throw new Error("Stripe onboarding response did not include a URL.");
@@ -365,12 +359,12 @@ export default function WalletTab() {
           ) : (
             <>
               <p className="mb-1 text-3xl font-bold text-slate-900">
-                {formatMoney(availableBalance(wallet), walletCurrency(wallet))}
+                {formatMoney(availableBalance(wallet))}
               </p>
               <p className="text-xs text-slate-500">Available to withdraw</p>
               {pendingBalance(wallet) !== undefined && (
                 <p className="mt-4 text-xs font-medium text-slate-600">
-                  Pending: {formatMoney(pendingBalance(wallet), walletCurrency(wallet))}
+                  Pending: {formatMoney(pendingBalance(wallet))}
                 </p>
               )}
             </>
