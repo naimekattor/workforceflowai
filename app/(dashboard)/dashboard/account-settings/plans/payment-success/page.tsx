@@ -28,7 +28,7 @@ export default function PaymentSuccess() {
 
         <Link
           href="/dashboard"
-          className="w-full inline-flex justify-center items-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors duration-200"
+          className="w-full inline-flex justify-center items-center px-4 py-3 bg-[#5aace8] text-white font-medium rounded-lg transition-colors duration-200"
         >
           Go to Dashboard
         </Link>

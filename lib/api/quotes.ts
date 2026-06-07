@@ -12,7 +12,7 @@ export interface Quote {
   quote_uuid: string;
   job_type: string;
   job_title?: string;
-  job_post?: number | { id?: number; title?: string } | null;
+  job_details?:  { id?: number; title?: string ,site_address?:string,notes?:string,jobstatus?:string} | null;
   quote_date: string;
   valid_until: string;
   deposit: string;

@@ -143,7 +143,7 @@ function AccountBadges({ account }: { account: StripeConnectAccountSummary }) {
           Primary
         </span>
       )}
-      {account.is_active && (
+      {account.is_current_plan && (
         <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
           Active
         </span>
@@ -490,7 +490,7 @@ export default function WalletTab() {
                         Set Primary
                       </button>
                     )}
-                    {!account.is_active && (
+                    {!account.is_current_plan && (
                       <button
                         type="button"
                         onClick={() => void handleAccountAction("active", account.id)}

@@ -153,7 +153,7 @@ export default function DashboardLayout({
               {initial}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold truncate">
+              <p className="text-sm font-semibold truncate text-slate-900">
                 {user?.name || 'User'}
               </p>
               <p className="text-[11px] text-slate-500 truncate">

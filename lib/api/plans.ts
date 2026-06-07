@@ -11,7 +11,7 @@ export interface Plan {
     quotes: number | null;
     team: number | null;
   };
-  is_active: boolean;
+  is_current_plan: boolean;
   plan_type: string;
 }
 

@@ -88,7 +88,7 @@ export default function EditQuote() {
             </div>
 
             {/* Deposit % */}
-            <div>
+            {/* <div>
               <label htmlFor="deposit" className="block text-[13px] font-bold text-slate-800 mb-1.5">
                 Deposit % (Optional)
               </label>
@@ -99,7 +99,7 @@ export default function EditQuote() {
                 placeholder="0"
                 className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400"
               />
-            </div>
+            </div> */}
 
             {/* Payment Note */}
             <div>

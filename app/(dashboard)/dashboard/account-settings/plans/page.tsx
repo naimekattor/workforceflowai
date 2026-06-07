@@ -191,7 +191,7 @@ export default function AccountPlans() {
           </div>
         ) : (
           plans.map((plan) => {
-            const isCurrent = plan.is_active;
+            const isCurrent = plan.is_current_plan;
             const popular = isPopularPlan(plan);
             const freePlan = isFreePlan(plan);
             const features =

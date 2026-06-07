@@ -51,7 +51,7 @@ export interface StripeConnectAccountSummary {
   display_name: string;
   account_health: string;
   is_primary: boolean;
-  is_active: boolean;
+  is_current_plan: boolean;
   onboarding_complete: boolean;
   is_connected: boolean;
   is_ready_for_payments: boolean;

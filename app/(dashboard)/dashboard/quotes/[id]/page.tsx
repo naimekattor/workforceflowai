@@ -60,13 +60,13 @@ function getQuoteCustomerId(quote: Quote) {
 }
 
 function getQuoteJobId(quote: Quote) {
-  if (typeof quote.job_post === 'number') return quote.job_post;
-  return quote.job_post?.id;
+  if (typeof quote.job_details === 'number') return quote.job_details;
+  return quote.job_details?.id;
 }
 
 function getQuoteJobTitle(quote: Quote, job: Job | null) {
   const embeddedJobTitle =
-    typeof quote.job_post === 'object' && quote.job_post !== null ? quote.job_post.title : undefined;
+    typeof quote.job_details === 'object' && quote.job_details !== null ? quote.job_details.title : undefined;
 
   return job?.title || embeddedJobTitle || quote.job_title || quote.job_type || 'No job';
 }

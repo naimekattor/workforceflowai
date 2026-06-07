@@ -226,12 +226,12 @@ export default function AddJob() {
 
           <div>
             <label htmlFor="notes" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-              Description
+             Job Description
             </label>
             <textarea
               id="notes"
               rows={4}
-              placeholder="Additional information about this job..."
+              placeholder="Information about this job..."
               {...register("notes")}
               className={`${inputClassName} resize-none py-3`}
             />

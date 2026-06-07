@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { 
   Building2, 
   Receipt, 
@@ -441,7 +441,7 @@ function toDisplayPlan(plan: ApiPlan | undefined): DisplayPlan {
 }
 
 function getCurrentPlan(plans: ApiPlan[]) {
-  return toDisplayPlan(plans.find((plan) => plan.is_active) || plans[0]);
+  return toDisplayPlan(plans.find((plan) => plan.is_current_plan) || plans[0]);
 }
 
 function cleanAccountSettingsWalletUrl() {
@@ -491,7 +491,7 @@ export default function AccountSettings() {
     );
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const userProfile = await getUserProfile();
@@ -505,7 +505,7 @@ export default function AccountSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -533,7 +533,7 @@ export default function AccountSettings() {
     if (session?.accessToken) {
       fetchData();
     }
-  }, [session]);
+  }, [session?.accessToken, fetchData]);
 
   useEffect(() => {
     if (!session?.accessToken) {
@@ -1383,7 +1383,7 @@ export default function AccountSettings() {
                         aria-label={`Download invoice ${invoice.invoice_id}`}
                         title="Download endpoint is not available yet"
                       >
-                        <Download className="w-4 h-4" />
+                        {/* <Download className="w-4 h-4" /> */}
                       </button>
                     </div>
                   </div>
@@ -1448,27 +1448,66 @@ export default function AccountSettings() {
       )}
 
       {/* Fixed Footer Action */}
-      {(activeTab === 'profile' || activeTab === 'tax' || activeTab === 'notifications') && (
-        <div className="fixed bottom-0 left-64 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-200 flex justify-end z-10">
-          <button 
-            onClick={handleSave}
-            disabled={
-              isSaving ||
-              loading ||
-              ((activeTab === 'profile' || activeTab === 'tax') && !business) ||
-              (activeTab === 'notifications' && !notificationSettings)
-            }
-            className="flex items-center gap-2 px-6 py-2.5 bg-[#22d3ee] hover:bg-[#06b6d4] text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:bg-slate-300"
-          >
-            {isSaving ? 'Saving...' : (
-              <>
-                <Save className="w-4 h-4" />
-                {activeTab === 'tax' ? 'Save Tax Settings' : activeTab === 'notifications' ? 'Save Notification Preferences' : 'Save Business Profile'}
-              </>
-            )}
-          </button>
-        </div>
+      {(activeTab === 'profile' ||
+  activeTab === 'tax' ||
+  activeTab === 'notifications') && (
+  <div
+    className="
+      fixed bottom-0
+      left-0 md:left-64
+      right-0
+      p-4 sm:p-6
+      bg-white/80
+      backdrop-blur-md
+      border-t border-slate-200
+      flex justify-center sm:justify-end
+      z-10
+    "
+  >
+    <button
+      onClick={handleSave}
+      disabled={
+        isSaving ||
+        loading ||
+        ((activeTab === 'profile' || activeTab === 'tax') && !business) ||
+        (activeTab === 'notifications' && !notificationSettings)
+      }
+      className="
+        flex items-center justify-center gap-2
+        w-full sm:w-auto
+        max-w-full
+        px-4 sm:px-6
+        py-2.5
+        bg-[#22d3ee] hover:bg-[#06b6d4]
+        text-white
+        rounded-lg
+        text-xs sm:text-sm
+        font-bold
+        transition-colors
+        shadow-sm
+        disabled:bg-slate-300
+        disabled:cursor-not-allowed
+        whitespace-normal
+        text-center
+      "
+    >
+      {isSaving ? (
+        "Saving..."
+      ) : (
+        <>
+          <Save className="w-4 h-4 flex-shrink-0" />
+          <span>
+            {activeTab === "tax"
+              ? "Save Tax Settings"
+              : activeTab === "notifications"
+              ? "Save Notification Preferences"
+              : "Save Business Profile"}
+          </span>
+        </>
       )}
+    </button>
+  </div>
+)}
 
     </div>
   );
