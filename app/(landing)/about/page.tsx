@@ -1,6 +1,12 @@
 import React from 'react';
 import { Target, Users, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Reveal,
+  RevealSection,
+  Stagger,
+  StaggerItem,
+} from '@/components/landing/MotionReveal';
 
 const AboutUs = () => {
   const reasons = [
@@ -22,11 +28,11 @@ const AboutUs = () => {
   ];
 
   return (
-    <section className="py-24 px-6 bg-white overflow-hidden">
+    <RevealSection className="py-24 px-6 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
         
         {/* Left Column: Content */}
-        <div className="flex-1 space-y-8">
+        <Reveal className="flex-1 space-y-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-sm font-medium border border-cyan-100">
             <Sparkles className="w-4 h-4" />
             About WorkforceFlow AI
@@ -52,18 +58,18 @@ const AboutUs = () => {
             </button>
             </Link>
           </div>
-        </div>
+        </Reveal>
 
         {/* Right Column: Feature Card */}
-        <div className="flex-1 w-full max-w-xl">
+        <Reveal className="flex-1 w-full max-w-xl" delay={0.12} y={18}>
           <div className="bg-white border border-slate-100 rounded-[32px] p-8 lg:p-12 shadow-2xl shadow-cyan-100/50">
             <h3 className="text-2xl font-bold text-slate-900 mb-8">
               Why teams choose WorkforceFlow AI
             </h3>
             
-            <div className="space-y-6">
+            <Stagger className="space-y-6" stagger={0.07}>
               {reasons.map((reason, idx) => (
-                <div key={idx} className="flex gap-5 p-6 rounded-2xl border border-slate-50 bg-slate-50/30">
+                <StaggerItem key={idx} className="flex gap-5 p-6 rounded-2xl border border-slate-50 bg-slate-50/30">
                   <div className="shrink-0 p-3 bg-white rounded-xl shadow-sm h-fit">
                     {reason.icon}
                   </div>
@@ -75,14 +81,14 @@ const AboutUs = () => {
                       {reason.description}
                     </p>
                   </div>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           </div>
-        </div>
+        </Reveal>
 
       </div>
-    </section>
+    </RevealSection>
   );
 };
 

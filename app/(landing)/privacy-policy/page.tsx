@@ -1,10 +1,10 @@
 import React from "react";
-import { Lock, Shield, Scale } from "lucide-react";
+import { Reveal } from "@/components/landing/MotionReveal";
 
 const PrivacyPolicy = () => {
   return (
     <div className="bg-white min-h-screen py-24 px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-10 text-slate-700 leading-7">
+      <Reveal className="max-w-4xl mx-auto space-y-10 text-slate-700 leading-7">
         {/* Header */}
         <div className="border-b pb-6">
           <h1 className="text-4xl font-bold text-slate-900 mb-3">
@@ -298,7 +298,7 @@ const PrivacyPolicy = () => {
             <p>Delivers relevant advertisements and measures engagement</p>
           </div>
         </section>
-      </div>
+      </Reveal>
     </div>
   );
 };

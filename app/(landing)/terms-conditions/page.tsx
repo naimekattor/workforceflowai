@@ -1,4 +1,5 @@
 import React from "react";
+import { Reveal } from "@/components/landing/MotionReveal";
 
 const TermsAndConditions = () => {
   // Exact data mapping to preserve every character and bullet point
@@ -290,7 +291,7 @@ const TermsAndConditions = () => {
 
   return (
     <div className=" min-h-screen py-16 px-4 sm:px-6 lg:px-8 font-sans selection:bg-indigo-100">
-      <div className="max-w-4xl mx-auto">
+      <Reveal className="max-w-4xl mx-auto">
         <div className="overflow-hidden">
           
           {/* Main Content Area */}
@@ -352,7 +353,7 @@ const TermsAndConditions = () => {
         </div>
 
         
-      </div>
+      </Reveal>
     </div>
   );
 };

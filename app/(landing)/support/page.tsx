@@ -1,6 +1,12 @@
 import React from 'react';
 import { BookOpen, HelpCircle, LifeBuoy, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Reveal,
+  RevealSection,
+  Stagger,
+  StaggerItem,
+} from '@/components/landing/MotionReveal';
 
 const SupportCenter = () => {
   const supportOptions = [
@@ -28,22 +34,22 @@ const SupportCenter = () => {
   ];
 
   return (
-    <section className="py-24 px-6 bg-white">
+    <RevealSection className="py-24 px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         {/* Header Section */}
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16">
           <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">
             Support Center
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Find practical answers quickly and get help when you need it.
           </p>
-        </div>
+        </Reveal>
 
         {/* Grid Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {supportOptions.map((option, index) => (
-            <div 
+            <StaggerItem 
               key={index} 
               className="group p-8 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 flex flex-col items-start"
             >
@@ -68,11 +74,11 @@ const SupportCenter = () => {
                 {option.linkText}
                 <ArrowRight className="ml-2 w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
               </Link>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </div>
-    </section>
+    </RevealSection>
   );
 };
 

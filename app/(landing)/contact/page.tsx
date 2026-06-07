@@ -4,6 +4,12 @@ import axios from "axios";
 import React, { useState, type FormEvent } from "react";
 import { Mail, MapPin, MessageSquare } from "lucide-react";
 import apiClient from "@/lib/api/axios";
+import {
+  Reveal,
+  RevealSection,
+  Stagger,
+  StaggerItem,
+} from "@/components/landing/MotionReveal";
 import { showError, showSuccess } from "@/lib/ui/alerts";
 
 type SupportEmailPayload = {
@@ -75,10 +81,10 @@ const ContactSection = () => {
   }
 
   return (
-    <section className="bg-white py-32 px-4 sm:px-6 lg:px-8 font-sans">
+    <RevealSection className="bg-white py-32 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
-        <div className="text-center mb-12">
+        <Reveal className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
             Contact Us
           </h2>
@@ -86,13 +92,13 @@ const ContactSection = () => {
             Have questions about workforceflow ai? Reach out and our team will help you
             choose the best setup for your business.
           </p>
-        </div>
+        </Reveal>
 
         {/* Content Grid */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <Stagger className="grid md:grid-cols-2 gap-8">
           
           {/* Left Column: Contact Info */}
-          <div className="bg-white border border-slate-100 rounded-3xl p-8 md:p-10 shadow-sm transition-all hover:shadow-md">
+          <StaggerItem className="bg-white border border-slate-100 rounded-3xl p-8 md:p-10 shadow-sm transition-all hover:shadow-md">
             <h3 className="text-xl font-bold text-slate-900 mb-8">Get in touch</h3>
             
             <div className="space-y-6">
@@ -114,10 +120,10 @@ const ContactSection = () => {
                 <span>London, United Kingdom</span>
               </div>
             </div>
-          </div>
+          </StaggerItem>
 
           {/* Right Column: Form */}
-          <div className="bg-white border border-slate-100 rounded-3xl p-8 md:p-10 shadow-sm transition-all hover:shadow-md">
+          <StaggerItem className="bg-white border border-slate-100 rounded-3xl p-8 md:p-10 shadow-sm transition-all hover:shadow-md">
             <h3 className="text-xl font-bold text-slate-900 mb-6">Message our team</h3>
             
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -170,11 +176,11 @@ const ContactSection = () => {
                 {isSubmitting ? "Sending..." : "Send Message"}
               </button>
             </form>
-          </div>
+          </StaggerItem>
 
-        </div>
+        </Stagger>
       </div>
-    </section>
+    </RevealSection>
   );
 };
 
