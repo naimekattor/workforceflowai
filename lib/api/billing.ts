@@ -48,14 +48,21 @@ export interface StripeConnectOnboardingLinkResponse {
 
 export interface StripeConnectAccountSummary {
   id: number;
-  display_name: string;
-  account_health: string;
+  display_name?: string;
+  stripe_account_id?: string;
+  account_type?: string;
+  status?: string;
+  account_health?: string;
   is_primary: boolean;
-  is_current_plan: boolean;
-  onboarding_complete: boolean;
+  is_current_plan?: boolean;
+  is_active?: boolean;
+  onboarding_complete?: boolean;
+  details_submitted?: boolean;
+  charges_enabled?: boolean;
+  payouts_enabled?: boolean;
   is_connected: boolean;
   is_ready_for_payments: boolean;
-  can_receive_payouts: boolean;
+  can_receive_payouts?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -92,7 +99,8 @@ export interface StripeConnectPayoutPayload {
   payout_amount: string;
 }
 
-export interface StripeConnectActionResponse {
+export interface StripeConnectActionResponse
+  extends Partial<StripeConnectAccountSummary> {
   detail?: string;
   error?: string;
   message?: string;

@@ -135,27 +135,70 @@ function billingStatusClassName(status: string) {
   return "text-slate-500";
 }
 
+function isActiveStripeAccount(account: StripeConnectAccountSummary) {
+  return (
+    account.is_active === true ||
+    account.is_current_plan === true ||
+    account.status?.toLowerCase() === "active"
+  );
+}
+
+function isConnectedStripeAccount(account: StripeConnectAccountSummary) {
+  return account.is_connected === true || account.status?.toLowerCase() === "active";
+}
+
+function hasCompletedStripeOnboarding(account: StripeConnectAccountSummary) {
+  return account.onboarding_complete === true || account.details_submitted === true;
+}
+
+function canReceiveStripePayouts(account: StripeConnectAccountSummary) {
+  return (
+    account.payouts_enabled === true ||
+    account.can_receive_payouts === true ||
+    account.is_ready_for_payments === true
+  );
+}
+
+function stripeAccountTitle(account: StripeConnectAccountSummary) {
+  if (account.display_name) return account.display_name;
+  if (isConnectedStripeAccount(account)) return "Connected Stripe account";
+  return `Stripe account ${account.id}`;
+}
+
+function stripeAccountStatusLabel(account: StripeConnectAccountSummary) {
+  return formatLabel(account.account_health || account.status || "connected");
+}
+
 function AccountBadges({ account }: { account: StripeConnectAccountSummary }) {
+  const isActive = isActiveStripeAccount(account);
+  const isConnected = isConnectedStripeAccount(account);
+  const canReceivePayouts = canReceiveStripePayouts(account);
+
   return (
     <div className="flex flex-wrap gap-2">
+      {isConnected && (
+        <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-bold text-cyan-700">
+          Connected
+        </span>
+      )}
+      {isActive && (
+        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
+          Active
+        </span>
+      )}
       {account.is_primary && (
         <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
           Primary
         </span>
       )}
-      {account.is_current_plan && (
-        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
-          Active
-        </span>
-      )}
       <span
         className={`rounded-full px-2 py-1 text-[11px] font-bold ${
-          account.can_receive_payouts
+          canReceivePayouts
             ? "bg-cyan-50 text-cyan-700"
             : "bg-slate-100 text-slate-600"
         }`}
       >
-        {account.can_receive_payouts ? "Payouts enabled" : "Payouts pending"}
+        {canReceivePayouts ? "Payouts enabled" : "Payouts pending"}
       </span>
     </div>
   );
@@ -263,6 +306,37 @@ export default function WalletTab() {
         action === "primary"
           ? await setPrimaryStripeConnectAccount(accountId)
           : await turnActiveStripeConnectAccount(accountId);
+
+      if (typeof response.id === "number") {
+        setAccounts((currentAccounts) =>
+          currentAccounts.map((account) => {
+            if (account.id === response.id) {
+              return {
+                ...account,
+                ...response,
+                is_primary:
+                  action === "primary"
+                    ? true
+                    : response.is_primary ?? account.is_primary,
+                is_current_plan:
+                  action === "active"
+                    ? true
+                    : response.is_current_plan ?? account.is_current_plan,
+                is_active:
+                  action === "active"
+                    ? true
+                    : response.is_active ?? account.is_active,
+              };
+            }
+
+            if (action === "primary") {
+              return { ...account, is_primary: false };
+            }
+
+            return { ...account, is_current_plan: false, is_active: false };
+          })
+        );
+      }
 
       await showSuccess(
         getActionMessage(
@@ -464,9 +538,9 @@ export default function WalletTab() {
                   <div>
                     <div className="mb-2 flex items-center gap-2">
                       <h3 className="text-sm font-bold text-slate-900">
-                        {account.display_name || `Stripe account ${account.id}`}
+                        {stripeAccountTitle(account)}
                       </h3>
-                      {account.onboarding_complete && (
+                      {hasCompletedStripeOnboarding(account) && (
                         <CheckCircle2
                           className="h-4 w-4 text-emerald-500"
                           aria-label="Onboarding complete"
@@ -475,7 +549,7 @@ export default function WalletTab() {
                     </div>
                     <AccountBadges account={account} />
                     <p className="mt-2 text-xs text-slate-500">
-                      {formatLabel(account.account_health)} - Added {formatDate(account.created_at)}
+                      {stripeAccountStatusLabel(account)} - Added {formatDate(account.created_at)}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -490,7 +564,7 @@ export default function WalletTab() {
                         Set Primary
                       </button>
                     )}
-                    {!account.is_current_plan && (
+                    {!isActiveStripeAccount(account) && (
                       <button
                         type="button"
                         onClick={() => void handleAccountAction("active", account.id)}
