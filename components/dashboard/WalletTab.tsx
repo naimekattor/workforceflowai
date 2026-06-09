@@ -596,7 +596,7 @@ export default function WalletTab() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-2">
           <History className="h-5 w-5 text-slate-500" />
           <h2 className="text-[15px] font-bold text-slate-900">
@@ -647,7 +647,7 @@ export default function WalletTab() {
             ))}
           </div>
         )}
-      </section>
+      </section> */}
     </div>
   );
 }
