@@ -1,5 +1,6 @@
 # --- STAGE 1: Install dependencies ---
-FROM node:18-alpine AS deps
+# Changed from node:18-alpine to node:20-alpine
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -13,7 +14,8 @@ RUN \
   fi
 
 # --- STAGE 2: Build the application ---
-FROM node:18-alpine AS builder
+# Changed from node:18-alpine to node:20-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -37,7 +39,8 @@ RUN \
   fi
 
 # --- STAGE 3: Production runner ---
-FROM node:18-alpine AS runner
+# Changed from node:18-alpine to node:20-alpine
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
