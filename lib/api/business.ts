@@ -180,9 +180,19 @@ export const getBusinessDetails = async (
 
 export const updateBusinessDetails = async (
   usertype: string | null,
-  data: Partial<BusinessDetails>
+  data: Partial<BusinessDetails> | FormData
 ): Promise<BusinessDetails> => {
   const endpoint = getBusinessDetailsEndpoint(usertype);
   const response = await apiClient.patch<BusinessDetails>(endpoint, data);
   return response.data;
+};
+
+export const updateBusinessLogo = async (
+  usertype: string | null,
+  logo: File
+): Promise<BusinessDetails> => {
+  const formData = new FormData();
+  formData.append("company_logo", logo);
+
+  return updateBusinessDetails(usertype, formData);
 };

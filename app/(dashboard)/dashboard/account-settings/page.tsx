@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { 
   Building2, 
   Receipt, 
@@ -15,6 +15,7 @@ import {
   Save,
   Mail,
   Wallet,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -22,6 +23,7 @@ import {
   getUserProfile,
   getBusinessDetails,
   updateBusinessDetails,
+  updateBusinessLogo,
   getBusinessTypeKey,
   getBusinessTypeLabel,
   BusinessDetails,
@@ -214,6 +216,28 @@ function buildBusinessPayload(business: BusinessDetails): Partial<BusinessDetail
   payload.currency = 'GBP';
 
   return payload as Partial<BusinessDetails>;
+}
+
+function getBusinessDisplayName(
+  business: BusinessDetails | null,
+  profile: UserProfile | null
+) {
+  return (
+    business?.business_name ||
+    business?.trading_name ||
+    business?.company_name ||
+    business?.partnership_name ||
+    business?.llp_name ||
+    business?.full_name ||
+    profile?.full_name ||
+    profile?.name ||
+    profile?.email ||
+    'Business'
+  );
+}
+
+function getInitial(value: string) {
+  return value.trim().charAt(0).toUpperCase() || 'B';
 }
 
 function BusinessFieldInput({
@@ -454,11 +478,15 @@ function cleanAccountSettingsWalletUrl() {
 
 export default function AccountSettings() {
   const { data: session } = useSession();
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [business, setBusiness] = useState<BusinessDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLogoSaving, setIsLogoSaving] = useState(false);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const [billingHistory, setBillingHistory] = useState<BillingInfo[]>([]);
   const [billingHistoryLoading, setBillingHistoryLoading] = useState(true);
   const [billingHistoryError, setBillingHistoryError] = useState('');
@@ -692,6 +720,60 @@ export default function AccountSettings() {
     }
   };
 
+  const resetLogoSelection = () => {
+    setSelectedLogoFile(null);
+    setLogoPreviewUrl('');
+
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      resetLogoSelection();
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      resetLogoSelection();
+      await showError('Please choose an image file.');
+      return;
+    }
+
+    setSelectedLogoFile(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreviewUrl(typeof reader.result === 'string' ? reader.result : '');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoUpdate = async () => {
+    if (!profile || !selectedLogoFile) return;
+
+    try {
+      setIsLogoSaving(true);
+      const updatedBusiness = await updateBusinessLogo(
+        profile.usertype,
+        selectedLogoFile
+      );
+      setBusiness({ ...updatedBusiness, currency: 'GBP' });
+      resetLogoSelection();
+      await showSuccess('Company logo updated successfully!');
+    } catch (error) {
+      console.error('Error updating company logo:', error);
+      await showError('Failed to update company logo');
+    } finally {
+      setIsLogoSaving(false);
+    }
+  };
+
   const handleNotificationToggle = (
     key: NotificationSettingKey,
     checked: boolean
@@ -718,6 +800,9 @@ export default function AccountSettings() {
 
   const businessTypeKey = getBusinessTypeKey(profile?.usertype || business?.usertype);
   const businessTypeLabel = getBusinessTypeLabel(profile?.usertype || business?.usertype);
+  const businessDisplayName = getBusinessDisplayName(business, profile);
+  const businessInitial = getInitial(businessDisplayName);
+  const logoSrc = logoPreviewUrl || business?.company_logo || '';
   const supportsVatScheme =
     businessTypeKey === 'sole_trade' || businessTypeKey === 'partnership';
   const supportsPaye =
@@ -874,19 +959,72 @@ export default function AccountSettings() {
                 onChange={handleInputChange}
               />
 
-              {business.company_logo && (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                  <h2 className="text-[15px] font-bold text-slate-900 mb-3">Company Logo</h2>
-                  <a
-                    href={business.company_logo}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-medium text-[#22d3ee] hover:text-[#06b6d4]"
-                  >
-                    View current logo
-                  </a>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      {logoSrc ? (
+                        <img
+                          src={logoSrc}
+                          alt={`${businessDisplayName} logo`}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-3xl font-bold text-[#22d3ee]">
+                          {businessInitial}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h2 className="text-[15px] font-bold text-slate-900">
+                        Company Logo
+                      </h2>
+                      <p className="truncate text-sm font-semibold text-slate-700">
+                        {businessDisplayName}
+                      </p>
+                      <p className="text-xs text-slate-500">{businessTypeLabel}</p>
+                      {business.company_logo && (
+                        <a
+                          href={business.company_logo}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-xs font-bold text-[#22d3ee] hover:text-[#06b6d4]"
+                        >
+                          View current logo
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoFileChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={isLogoSaving}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition-colors hover:border-cyan-200 hover:text-[#06b6d4] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Choose Logo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogoUpdate}
+                      disabled={!selectedLogoFile || isLogoSaving}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#22d3ee] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#06b6d4] disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {isLogoSaving ? 'Updating...' : 'Update Logo'}
+                    </button>
+                  </div>
                 </div>
-              )}
+              </div>
             </>
           )}
         </div>
