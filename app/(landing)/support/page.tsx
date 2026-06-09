@@ -22,7 +22,7 @@ const SupportCenter = () => {
       description: "Quick answers to common questions about plans, billing, and workflow automation.",
       icon: <HelpCircle className="w-6 h-6 text-cyan-600" />,
       linkText: "Read FAQs",
-      href: "#"
+      href: "/faq"
     },
     {
       title: "Direct Help",

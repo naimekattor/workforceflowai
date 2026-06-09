@@ -1,5 +1,4 @@
 import React from "react";
-import { Reveal } from "@/components/landing/MotionReveal";
 
 const TermsAndConditions = () => {
   // Exact data mapping to preserve every character and bullet point
@@ -290,18 +289,18 @@ const TermsAndConditions = () => {
   ];
 
   return (
-    <div className=" min-h-screen py-16 px-4 sm:px-6 lg:px-8 font-sans selection:bg-indigo-100">
-      <Reveal className="max-w-4xl mx-auto">
+    <div className="bg-white min-h-screen py-24 px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-10 text-slate-700 leading-7">
         <div className="overflow-hidden">
           
           {/* Main Content Area */}
-          <div className="p-8 sm:p-12 text-slate-700 leading-relaxed text-[15px]">
+          <div>
             
             {legalSections.map((section, idx) => {
               // Handle top-level headers (Company Name, Title)
               if (section.type === "header") {
                 return (
-                  <h1 key={idx} className="text-2xl font-bold text-slate-900 text-center first:mb-1 last:mb-2">
+                  <h1 key={idx} className="text-4xl font-bold text-slate-900 mb-3">
                     {section.content}
                   </h1>
                 );
@@ -320,7 +319,7 @@ const TermsAndConditions = () => {
               // Handle Numbered Sections
               return (
                 <section key={idx} className="mb-8">
-                  <h2 className="text-lg font-semibold text-slate-900 mb-3">
+                  <h2 className="text-xl font-bold text-slate-900 mb-3">
                     {section.title}
                   </h2>
                   
@@ -353,7 +352,7 @@ const TermsAndConditions = () => {
         </div>
 
         
-      </Reveal>
+      </div>
     </div>
   );
 };

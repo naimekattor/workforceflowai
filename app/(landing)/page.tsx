@@ -27,6 +27,7 @@ import {
   Activity
 } from 'lucide-react';
 import Link from 'next/link';
+import { landingFaqs } from '@/lib/landing/faqs';
 import {
   Floating,
   Reveal,
@@ -585,12 +586,7 @@ export default function App() {
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
         </Reveal>
         <Stagger className="space-y-6">
-          {[
-            { q: "Can I switch plans anytime?", a: "Yes! You can upgrade or downgrade your plan at any time from your account settings." },
-            { q: "What payment methods do you accept?", a: "We accept all major credit cards securely processed through Stripe." },
-            { q: "Is there a setup fee?", a: "No setup fees, no hidden costs. The price you see is what you pay." },
-            { q: "Can I cancel my subscription?", a: "Yes, you can cancel anytime with no penalties. Your data remains accessible for 30 days after cancellation." }
-          ].map((faq, i) => (
+          {landingFaqs.map((faq, i) => (
             <StaggerItem key={i} className="bg-white border border-slate-200 rounded-2xl p-6">
               <h3 className="text-lg font-bold text-slate-900 mb-2">{faq.q}</h3>
               <p className="text-slate-600">{faq.a}</p>
