@@ -1582,7 +1582,7 @@ export default function AccountSettings() {
       )}
 
       {activeTab === 'team' && (
-        <CollaboratorList showAddButton={false} />
+        <CollaboratorList />
       )}
 
       {/* Fixed Footer Action */}
