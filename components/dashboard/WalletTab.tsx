@@ -407,7 +407,7 @@ export default function WalletTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-1">
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -451,7 +451,7 @@ export default function WalletTab() {
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        {/* <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center gap-2">
             <Banknote className="h-5 w-5 text-emerald-500" />
             <h2 className="text-[15px] font-bold text-slate-900">Withdraw</h2>
@@ -485,7 +485,7 @@ export default function WalletTab() {
               Withdraw
             </button>
           </form>
-        </section>
+        </section> */}
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { Customer, getCustomer } from "@/lib/api/customers";
 import { getRecentInvoices, RecentInvoice } from "@/lib/api/dashboard";
 import { formatCurrency } from "@/lib/invoices";
+import Image from "next/image";
 
 type InvoiceCustomer = Customer & {
   total_price?: string | number;
@@ -223,12 +224,15 @@ export default function InvoiceDetails() {
       >
         <div className="flex items-start justify-between gap-8 mb-10 border-b border-slate-100 pb-6">
           <div>
-            <p className="text-xs font-bold text-slate-500 mb-2">Workforceflow AI</p>
+            { invoice.company_logo?
+              <Image src={invoice.company_logo} alt="Workforceflow AI" width={100} height={50} /> 
+              : <p className="text-xl font-bold text-[#22d3ee]">Workforceflow AI</p>
+            }
             <h2 className="text-3xl font-bold text-slate-900">INVOICE</h2>
           </div>
 
           <div className="text-right">
-            <p className="text-xl font-bold text-[#22d3ee]">Workforceflow AI</p>
+            <p className="text-xl font-bold text-[#22d3ee]">{invoice.company_name || "Workforceflow AI"}</p>
             <span className={`mt-3 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(invoice.quote_status)}`}>
               {invoice.quote_status}
             </span>
