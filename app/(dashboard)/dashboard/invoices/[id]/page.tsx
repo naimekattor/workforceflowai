@@ -224,7 +224,7 @@ export default function InvoiceDetails() {
         <div className="flex items-start justify-between gap-8 mb-10 border-b border-slate-100 pb-6">
           <div>
             <p className="text-xs font-bold text-slate-500 mb-2">Workforceflow AI</p>
-            <h2 className="text-3xl font-bold text-slate-900">TAX INVOICE</h2>
+            <h2 className="text-3xl font-bold text-slate-900">INVOICE</h2>
           </div>
 
           <div className="text-right">
