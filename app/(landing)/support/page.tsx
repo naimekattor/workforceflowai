@@ -8,6 +8,10 @@ import {
   StaggerItem,
 } from '@/components/landing/MotionReveal';
 
+function isExternalHref(href: string) {
+  return /^https?:\/\//i.test(href);
+}
+
 const SupportCenter = () => {
   const supportOptions = [
     {
@@ -15,7 +19,7 @@ const SupportCenter = () => {
       description: "Step-by-step walkthroughs for onboarding, quoting, invoicing, and team setup.",
       icon: <BookOpen className="w-6 h-6 text-cyan-600" />,
       linkText: "Browse Guides",
-      href: "#"
+      href: "https://www.youtube.com/"
     },
     {
       title: "FAQ",
@@ -67,13 +71,25 @@ const SupportCenter = () => {
               </p>
 
               {/* Action Link */}
-              <Link 
-                href={option.href}
-                className="flex items-center text-cyan-700 font-semibold hover:text-cyan-800 transition-colors group/link"
-              >
-                {option.linkText}
-                <ArrowRight className="ml-2 w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
-              </Link>
+              {isExternalHref(option.href) ? (
+                <a
+                  href={option.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center text-cyan-700 font-semibold hover:text-cyan-800 transition-colors group/link"
+                >
+                  {option.linkText}
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
+                </a>
+              ) : (
+                <Link
+                  href={option.href}
+                  className="flex items-center text-cyan-700 font-semibold hover:text-cyan-800 transition-colors group/link"
+                >
+                  {option.linkText}
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
+                </Link>
+              )}
             </StaggerItem>
           ))}
         </Stagger>
