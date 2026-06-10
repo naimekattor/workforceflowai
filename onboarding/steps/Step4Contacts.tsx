@@ -36,6 +36,16 @@ export default function Step4Contacts() {
       return;
     }
 
+    if (!clean(data.primaryMobile)) {
+      setError('Primary contact mobile is required.');
+      return;
+    }
+
+    if (!clean(data.primaryAddress)) {
+      setError('Primary contact full address is required.');
+      return;
+    }
+
     if (clean(data.secondaryEmail) && !EMAIL_PATTERN.test(clean(data.secondaryEmail))) {
       setError('Enter a valid secondary contact email, or leave it blank.');
       return;
@@ -73,13 +83,13 @@ export default function Step4Contacts() {
                 onChange={e => update('primaryEmail', e.target.value)}
               />
               <Field
-                label="Mobile" type="tel"
+                label="Mobile" required type="tel"
                 placeholder="+44 7700 900000"
                 value={data.primaryMobile}
                 onChange={e => update('primaryMobile', e.target.value)}
               />
               <Field
-                label="Full Address"
+                label="Full Address" required
                 placeholder="123 High Street, London, SW1A 1AA"
                 value={data.primaryAddress}
                 onChange={e => update('primaryAddress', e.target.value)}

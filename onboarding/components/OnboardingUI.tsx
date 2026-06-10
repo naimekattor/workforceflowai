@@ -158,11 +158,12 @@ export function SectionBox({ title, children }: { title: string; children: React
 
 interface ToggleRowProps {
   label: string;
+  required?: boolean;
   checked: boolean;
   onChange: (v: boolean) => void;
 }
 
-export function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
+export function ToggleRow({ label, required, checked, onChange }: ToggleRowProps) {
   return (
     <label className="flex items-center gap-3 cursor-pointer">
       <input
@@ -171,7 +172,10 @@ export function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
         onChange={e => onChange(e.target.checked)}
         className="w-4 h-4 rounded border-slate-300 text-[#22d3ee] focus:ring-[#22d3ee]"
       />
-      <span className="text-[13px] font-semibold text-slate-800">{label}</span>
+      <span className="text-[13px] font-semibold text-slate-800">
+        {label}
+        {required && <span className="text-red-400 ml-0.5">*</span>}
+      </span>
     </label>
   );
 }

@@ -262,6 +262,18 @@ function partnerUtrs(data: OnboardingData): string[] {
   return data.p_partners.map((partner) => clean(partner.utr)).filter(Boolean);
 }
 
+function completePartners(data: OnboardingData): string[] {
+  return data.p_partners
+    .filter((partner) => clean(partner.name) && clean(partner.utr))
+    .map((partner) => clean(partner.name));
+}
+
+function hasIncompletePartner(data: OnboardingData): boolean {
+  return data.p_partners.some(
+    (partner) => Boolean(clean(partner.name)) !== Boolean(clean(partner.utr))
+  );
+}
+
 function getBusinessContactEmail(data: OnboardingData): string {
   if (data.businessType === 'limited_company') return clean(data.lc_email);
   if (data.businessType === 'partnership') return clean(data.p_email);
@@ -303,29 +315,73 @@ function validateOnboardingData(data: OnboardingData): ValidationIssue[] {
 
   if (data.businessType === 'sole_trader') {
     addIssue(issues, !clean(data.st_legalName), 'Sole trader legal name', businessRoute);
+    addIssue(issues, !clean(data.st_address), 'Sole trader business address', businessRoute);
+    addIssue(issues, !clean(data.st_utr), 'Sole trader UTR', businessRoute);
+    addIssue(issues, !clean(data.st_niNumber), 'National Insurance number', businessRoute);
+    addIssue(issues, !clean(data.st_industry), 'Industry / trade type', businessRoute);
   } else if (data.businessType === 'limited_company') {
     addIssue(issues, !clean(data.lc_companyName), 'Company name', businessRoute);
     addIssue(issues, !clean(data.lc_registrationNumber), 'Company registration number', businessRoute);
-    addIssue(issues, !getBusinessContactEmail(data), 'Company contact email', businessRoute);
+    addIssue(issues, !clean(data.lc_registeredAddress), 'Company registered address', businessRoute);
+    addIssue(issues, nonEmptyItems(data.lc_directors).length === 0, 'At least one director', businessRoute);
+    addIssue(issues, !clean(data.lc_email), 'Company contact email', businessRoute);
+    addIssue(
+      issues,
+      Boolean(clean(data.lc_email)) && !EMAIL_PATTERN.test(clean(data.lc_email)),
+      'Valid company contact email',
+      businessRoute
+    );
+    addIssue(issues, !clean(data.lc_phone), 'Company phone number', businessRoute);
+    addIssue(issues, !clean(data.lc_corpTaxUtr), 'Corporation Tax UTR', businessRoute);
   } else if (data.businessType === 'partnership') {
     addIssue(issues, !clean(data.p_partnershipName), 'Partnership name', businessRoute);
-    addIssue(issues, partnerNames(data).length === 0, 'At least one partner name', businessRoute);
+    addIssue(issues, !clean(data.p_address), 'Partnership address', businessRoute);
+    addIssue(issues, completePartners(data).length === 0, 'At least one partner name and UTR', businessRoute);
+    addIssue(issues, hasIncompletePartner(data), 'Complete partner name and UTR pairs', businessRoute);
+    addIssue(issues, !clean(data.p_email), 'Partnership contact email', businessRoute);
+    addIssue(
+      issues,
+      Boolean(clean(data.p_email)) && !EMAIL_PATTERN.test(clean(data.p_email)),
+      'Valid partnership contact email',
+      businessRoute
+    );
+    addIssue(issues, !clean(data.p_phone), 'Partnership phone number', businessRoute);
   } else if (data.businessType === 'llp') {
     addIssue(issues, !clean(data.llp_name), 'LLP name', businessRoute);
     addIssue(issues, !clean(data.llp_registrationNumber), 'LLP registration number', businessRoute);
+    addIssue(issues, !clean(data.llp_registeredAddress), 'LLP registered address', businessRoute);
     addIssue(issues, nonEmptyItems(data.llp_members).length === 0, 'At least one LLP member', businessRoute);
-    addIssue(issues, !getBusinessContactEmail(data), 'LLP contact email', businessRoute);
+    addIssue(issues, !clean(data.llp_email), 'LLP contact email', businessRoute);
+    addIssue(
+      issues,
+      Boolean(clean(data.llp_email)) && !EMAIL_PATTERN.test(clean(data.llp_email)),
+      'Valid LLP contact email',
+      businessRoute
+    );
+    addIssue(issues, !clean(data.llp_phone), 'LLP phone number', businessRoute);
+    addIssue(issues, !clean(data.llp_corpTaxUtr), 'Corporation Tax UTR', businessRoute);
   }
 
-  const contactName = getContactName(data);
-  const contactEmail = getContactEmail(data);
+  const taxRoute = getStep3Route(data.businessType);
 
-  addIssue(issues, !contactName, 'Primary contact name', '/onboarding/step-4');
-  addIssue(issues, !contactEmail, 'Primary contact email', '/onboarding/step-4');
+  addIssue(issues, data.vatRegistered && !clean(data.vatNumber), 'VAT number', taxRoute);
+  addIssue(issues, data.cisRegistered && !clean(data.cisRole), 'CIS role', taxRoute);
+  addIssue(issues, !clean(data.accountingMethod), 'Accounting method', taxRoute);
+
+  addIssue(issues, !clean(data.primaryName), 'Primary contact name', '/onboarding/step-4');
+  addIssue(issues, !clean(data.primaryEmail), 'Primary contact email', '/onboarding/step-4');
   addIssue(
     issues,
-    Boolean(contactEmail) && !EMAIL_PATTERN.test(contactEmail),
+    Boolean(clean(data.primaryEmail)) && !EMAIL_PATTERN.test(clean(data.primaryEmail)),
     'Valid primary contact email',
+    '/onboarding/step-4'
+  );
+  addIssue(issues, !clean(data.primaryMobile), 'Primary contact mobile', '/onboarding/step-4');
+  addIssue(issues, !clean(data.primaryAddress), 'Primary contact full address', '/onboarding/step-4');
+  addIssue(
+    issues,
+    Boolean(clean(data.secondaryEmail)) && !EMAIL_PATTERN.test(clean(data.secondaryEmail)),
+    'Valid secondary contact email',
     '/onboarding/step-4'
   );
 
@@ -367,6 +423,7 @@ function appendCommonFields(formData: FormData, data: OnboardingData) {
   appendValue(formData, 'secondary_email', data.secondaryEmail);
   appendValue(formData, 'secondary_phone_number', data.secondaryMobile);
   appendValue(formData, 'is_vat_registered', data.vatRegistered);
+  if (data.vatRegistered) appendValue(formData, 'vat_number', data.vatNumber);
   appendValue(formData, 'is_cis_registered', data.cisRegistered);
   if (data.cisRegistered) appendValue(formData, 'cis_role', apiCisRole(data.cisRole));
   appendValue(formData, 'accounting_method', apiAccountingMethod(data.accountingMethod));

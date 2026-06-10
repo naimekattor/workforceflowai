@@ -9,7 +9,7 @@
  * Both point here — we read businessType from context to set back-navigation.
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import OnboardingLayout from "../context/OnboardingLayout";
 import {
@@ -24,9 +24,34 @@ import {
 } from "../components/OnboardingUI";
 import { useOnboarding, getStep2Route } from "../context/OnboardingContext";
 
+function clean(value: string | undefined): string {
+  return value?.trim() ?? "";
+}
+
 export default function Step3TaxRegistration() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleNext() {
+    if (data.vatRegistered && !clean(data.vatNumber)) {
+      setError("VAT number is required.");
+      return;
+    }
+
+    if (data.cisRegistered && !clean(data.cisRole)) {
+      setError("CIS role is required.");
+      return;
+    }
+
+    if (!clean(data.accountingMethod)) {
+      setError("Accounting method is required.");
+      return;
+    }
+
+    setError(null);
+    router.push("/onboarding/step-4");
+  }
 
   return (
     <OnboardingLayout currentStep={3}>
@@ -36,10 +61,17 @@ export default function Step3TaxRegistration() {
           description="Configure your tax registrations and accounting method."
         >
           <div className="space-y-4 sm:space-y-5">
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
+
             {/* VAT ─────────────────────────────────────────────────────────── */}
             <SectionBox title="VAT Registration">
               <ToggleRow
                 label="VAT Registered"
+                required
                 checked={data.vatRegistered}
                 onChange={(v) => {
                   update("vatRegistered", v);
@@ -53,12 +85,14 @@ export default function Step3TaxRegistration() {
                 <>
                   <Field
                     label="VAT Number"
+                    required
                     placeholder="Enter VAT Number"
                     value={data.vatNumber}
                     onChange={(e) => update("vatNumber", e.target.value)}
                   />
                   <SelectField
                     label="VAT Scheme"
+                    required
                     value={data.vatScheme}
                     onChange={(e) =>
                       update(
@@ -79,12 +113,14 @@ export default function Step3TaxRegistration() {
             <SectionBox title="CIS (Construction Industry Scheme)">
               <ToggleRow
                 label="CIS Registered"
+                required
                 checked={data.cisRegistered}
                 onChange={(v) => update("cisRegistered", v)}
               />
               {data.cisRegistered && (
                 <SelectField
                   label="CIS Role"
+                  required
                   value={data.cisRole}
                   onChange={(e) =>
                     update("cisRole", e.target.value as typeof data.cisRole)
@@ -102,6 +138,7 @@ export default function Step3TaxRegistration() {
             <SectionBox title="PAYE (Pay As You Earn)">
               <ToggleRow
                 label="PAYE Registered"
+                required
                 checked={data.payeRegistered}
                 onChange={(v) => update("payeRegistered", v)}
               />
@@ -119,7 +156,7 @@ export default function Step3TaxRegistration() {
             </SectionBox>
 
             {/* Accounting Method ───────────────────────────────────────────── */}
-            <SectionBox title="Accounting Method">
+            <SectionBox title="Accounting Method *">
               <SelectField
                 value={data.accountingMethod}
                 onChange={(e) =>
@@ -145,7 +182,7 @@ export default function Step3TaxRegistration() {
         <CardFooter
           step={3}
           onPrev={() => router.push(getStep2Route(data.businessType))}
-          onNext={() => router.push("/onboarding/step-4")}
+          onNext={handleNext}
         />
       </OnboardingCard>
     </OnboardingLayout>
