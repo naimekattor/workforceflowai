@@ -1,5 +1,5 @@
 "use client"
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   CheckCircle2,
   ChevronRight,
@@ -38,6 +38,8 @@ import {
   StaggerListItem,
 } from '@/components/landing/MotionReveal';
 import { useSession } from 'next-auth/react';
+import { getPlans, Plan } from '@/lib/api/plans';
+import { formatCurrency } from '@/lib/invoices';
 
 const PLAN_PURCHASE_PATH = '/dashboard/account-settings/plans';
 
@@ -71,7 +73,122 @@ function PricingPlanLink({
   );
 }
 
+function formatPlanPrice(price: string) {
+  const amount = Number.parseFloat(price);
+  return formatCurrency(Number.isNaN(amount) ? 0 : amount);
+}
+
+function formatPlanLimit(label: string, value: number | null | undefined) {
+  if (value === undefined) return null;
+  if (value === null) return `Unlimited ${label}`;
+  return `Up to ${value.toLocaleString()} ${label}`;
+}
+
+function getPlanFeatureList(plan: Plan) {
+  const limits = [
+    formatPlanLimit('customers', plan.limits?.customers),
+    formatPlanLimit('quotes per month', plan.limits?.quotes),
+    formatPlanLimit('team members', plan.limits?.team),
+  ].filter((item): item is string => Boolean(item));
+
+  const features = plan.features.length > 0 ? plan.features : [plan.description || `${plan.name} Plan`];
+  return [...limits, ...features];
+}
+
+function isPopularPlan(plan: Plan) {
+  return plan.is_popular === true;
+}
+
+function PricingPlanCard({ plan }: { plan: Plan }) {
+  const popular = isPopularPlan(plan);
+  const features = getPlanFeatureList(plan);
+
+  return (
+    <StaggerItem className={popular ? 'flex' : 'bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col'}>
+      <div
+        className={
+          popular
+            ? 'bg-gradient-to-b from-cyan-400 to-teal-400 p-8 rounded-3xl shadow-xl relative z-10 flex flex-col transform lg:scale-105 w-full h-full'
+            : 'contents'
+        }
+      >
+        {popular && (
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+            Most Popular
+          </div>
+        )}
+        <h3 className={`text-xl font-bold mb-2 ${popular ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h3>
+        <p className={`text-sm mb-6 ${popular ? 'text-cyan-50' : 'text-slate-500'}`}>
+          {plan.description || plan.plan_type}
+        </p>
+        <div className={`mb-6 ${popular ? 'text-white' : ''}`}>
+          <span className={`text-4xl font-extrabold ${popular ? '' : 'text-slate-900'}`}>
+            {formatPlanPrice(plan.price)}
+          </span>
+          <span className={popular ? 'text-cyan-100' : 'text-slate-500'}>/month</span>
+        </div>
+        <ul className="space-y-4 mb-8">
+          {features.map((feature, index) => (
+            <li
+              key={`${plan.id}-${index}`}
+              className={`flex items-center gap-3 text-sm ${popular ? 'text-white' : 'text-slate-600'}`}
+            >
+              <CheckCircle2 className={`w-4 h-4 shrink-0 ${popular ? 'text-cyan-200' : 'text-emerald-500'}`} />
+              {feature}
+            </li>
+          ))}
+        </ul>
+        <PricingPlanLink
+          planName={plan.name}
+          className={
+            popular
+              ? 'mt-auto block text-center w-full py-3 px-4 rounded-xl font-bold text-cyan-600 bg-white hover:bg-slate-50 transition-colors shadow-lg'
+              : 'mt-auto block text-center w-full py-3 px-4 rounded-xl font-semibold text-white bg-cyan-400 hover:bg-cyan-500 transition-colors'
+          }
+        >
+          Choose {plan.name}
+        </PricingPlanLink>
+      </div>
+    </StaggerItem>
+  );
+}
+
 export default function App() {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPlans = async () => {
+      try {
+        setPlansLoading(true);
+        setPlansError('');
+        const data = await getPlans();
+
+        if (isMounted) {
+          setPlans(Array.isArray(data.results) ? data.results : []);
+        }
+      } catch (error) {
+        console.error('Error fetching landing plans:', error);
+        if (isMounted) {
+          setPlans([]);
+          setPlansError('Plans are unavailable right now.');
+        }
+      } finally {
+        if (isMounted) {
+          setPlansLoading(false);
+        }
+      }
+    };
+
+    fetchPlans();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-cyan-100 selection:text-cyan-900">
@@ -475,6 +592,27 @@ export default function App() {
             <p className="text-lg text-slate-600">Choose the plan that fits your business. All plans include 14-day free trial.</p>
           </Reveal>
           
+          {plansLoading ? (
+            <div className="py-12 text-center text-sm font-semibold text-slate-500">
+              Loading plans...
+            </div>
+          ) : plansError ? (
+            <div className="mx-auto max-w-md rounded-2xl border border-red-100 bg-white px-6 py-5 text-center text-sm font-medium text-red-600 shadow-sm">
+              {plansError}
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center text-sm font-medium text-slate-500 shadow-sm">
+              No plans available
+            </div>
+          ) : (
+            <Stagger className="grid md:grid-cols-2 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch" stagger={0.07}>
+              {plans.map((plan) => (
+                <PricingPlanCard key={plan.id} plan={plan} />
+              ))}
+            </Stagger>
+          )}
+
+          {false && (
           <Stagger className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto items-stretch" stagger={0.07}>
             {/* Free */}
             <StaggerItem className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col">
@@ -577,6 +715,7 @@ export default function App() {
               </PricingPlanLink>
             </StaggerItem>
           </Stagger>
+          )}
         </div>
       </RevealSection>
 

@@ -28,7 +28,7 @@ function formatLimitValue(value: number | null | undefined) {
 }
 
 function isPopularPlan(plan: Plan) {
-  return plan.plan_type.toLowerCase() === "professional";
+  return plan.is_popular === true;
 }
 
 const planLimitLabels: Array<{
@@ -181,7 +181,7 @@ export default function AccountPlans() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 justify-items-center">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 justify-items-center">
         {loading ? (
           <div className="col-span-full py-12 text-sm font-medium text-slate-500">
             Loading plans...

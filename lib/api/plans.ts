@@ -12,6 +12,7 @@ export interface Plan {
     team: number | null;
   };
   is_current_plan: boolean;
+  is_popular?: boolean;
   plan_type: string;
   is_active?: boolean;
   max_customers?: number | null;
