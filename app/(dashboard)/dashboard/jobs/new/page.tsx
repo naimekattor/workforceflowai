@@ -62,13 +62,19 @@ export default function AddJob() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<JobInput>({
     defaultValues: {
       jobstatus: "Open",
+      site_address: "",
       notes: "",
+      customer: "",
     },
   });
+
+  const selectedCustomerId = watch("customer");
 
   useEffect(() => {
     if (status === "loading") {
@@ -95,6 +101,17 @@ export default function AddJob() {
 
     fetchCustomers();
   }, [session?.accessToken, status]);
+
+  useEffect(() => {
+    const selectedCustomer = customers.find(
+      (customer) => customer.id === Number(selectedCustomerId)
+    );
+
+    setValue("site_address", selectedCustomer?.site_address || "", {
+      shouldValidate: Boolean(selectedCustomerId),
+      shouldDirty: Boolean(selectedCustomerId),
+    });
+  }, [customers, selectedCustomerId, setValue]);
 
   const onSubmit: SubmitHandler<JobInput> = async (data) => {
     if (!session?.accessToken) {
