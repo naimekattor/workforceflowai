@@ -118,11 +118,11 @@ function PricingPlanCard({ plan }: { plan: Plan }) {
           </div>
         )}
         <h3 className={`text-xl font-bold mb-2 ${popular ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h3>
-        <p className={`text-sm mb-6 ${popular ? 'text-cyan-50' : 'text-slate-500'}`}>
+        <p className={`text-xs mb-6 ${popular ? 'text-cyan-50' : 'text-slate-500'}`}>
           {plan.description || plan.plan_type}
         </p>
         <div className={`mb-6 ${popular ? 'text-white' : ''}`}>
-          <span className={`text-4xl font-extrabold ${popular ? '' : 'text-slate-900'}`}>
+          <span className={`text-4xl font-bold ${popular ? '' : 'text-slate-900'}`}>
             {formatPlanPrice(plan.price)}
           </span>
           <span className={popular ? 'text-cyan-100' : 'text-slate-500'}>/month</span>
@@ -131,7 +131,7 @@ function PricingPlanCard({ plan }: { plan: Plan }) {
           {features.map((feature, index) => (
             <li
               key={`${plan.id}-${index}`}
-              className={`flex items-center gap-3 text-sm ${popular ? 'text-white' : 'text-slate-600'}`}
+              className={`flex items-center gap-3 text-xs ${popular ? 'text-white' : 'text-slate-600'}`}
             >
               <CheckCircle2 className={`w-4 h-4 shrink-0 ${popular ? 'text-cyan-200' : 'text-emerald-500'}`} />
               {feature}
