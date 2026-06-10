@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -82,7 +82,9 @@ export default function AddJob() {
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [loadingMoreCustomers, setLoadingMoreCustomers] = useState(false);
   const [nextCustomerPage, setNextCustomerPage] = useState<number | null>(null);
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [customerError, setCustomerError] = useState("");
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -101,6 +103,27 @@ export default function AddJob() {
   });
 
   const selectedCustomerId = watch("customer");
+  const selectedCustomer = customers.find(
+    (customer) => customer.id === Number(selectedCustomerId)
+  );
+
+  useEffect(() => {
+    if (!isCustomerDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        customerDropdownRef.current &&
+        !customerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [isCustomerDropdownOpen]);
 
   useEffect(() => {
     if (status === "loading") {
@@ -134,15 +157,19 @@ export default function AddJob() {
   }, [session?.accessToken, status]);
 
   useEffect(() => {
-    const selectedCustomer = customers.find(
-      (customer) => customer.id === Number(selectedCustomerId)
-    );
-
     setValue("site_address", selectedCustomer?.site_address || "", {
       shouldValidate: Boolean(selectedCustomerId),
       shouldDirty: Boolean(selectedCustomerId),
     });
-  }, [customers, selectedCustomerId, setValue]);
+  }, [selectedCustomer, selectedCustomerId, setValue]);
+
+  const handleSelectCustomer = (customer: Customer) => {
+    setValue("customer", String(customer.id), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    setIsCustomerDropdownOpen(false);
+  };
 
   const handleLoadMoreCustomers = async () => {
     if (!nextCustomerPage || loadingMoreCustomers) {
@@ -157,6 +184,7 @@ export default function AddJob() {
         mergeCustomers(currentCustomers, data.results)
       );
       setNextCustomerPage(getNextCustomerPage(data.next));
+      setIsCustomerDropdownOpen(true);
     } catch (error) {
       console.error("Error fetching more customers:", error);
       setCustomerError(formatApiError(error));
@@ -190,8 +218,6 @@ export default function AddJob() {
     }
   };
 
-  const selectClassName =
-    "w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 pr-10 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 appearance-none disabled:text-slate-400";
   const inputClassName =
     "w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400";
   const canSubmit =
@@ -231,44 +257,79 @@ export default function AddJob() {
 
           <div className="">
             <div>
-              <label htmlFor="customer" className="block text-[13px] font-bold text-slate-800 mb-1.5">
+              <label htmlFor="customer_dropdown" className="block text-[13px] font-bold text-slate-800 mb-1.5">
                 Customer *
               </label>
-              <div className="relative">
-                <select
-                  id="customer"
-                  {...register("customer", { required: "Customer is required" })}
+              <input
+                type="hidden"
+                id="customer"
+                {...register("customer", { required: "Customer is required" })}
+              />
+              <div ref={customerDropdownRef} className="relative">
+                <button
+                  type="button"
+                  id="customer_dropdown"
                   disabled={loadingCustomers || customers.length === 0}
-                  className={selectClassName}
-                  defaultValue=""
+                  onClick={() =>
+                    setIsCustomerDropdownOpen((isOpen) => !isOpen)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setIsCustomerDropdownOpen(false);
+                    }
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={isCustomerDropdownOpen}
+                  className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 pr-10 text-left text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 disabled:text-slate-400"
                 >
-                  <option value="" disabled>
-                    {loadingCustomers
-                      ? "Loading customers..."
-                      : customers.length === 0
-                        ? "No customers available"
-                        : "Select a customer"}
-                  </option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.customer_name}
-                    </option>
-                  ))}
-                </select>
+                  {loadingCustomers
+                    ? "Loading customers..."
+                    : customers.length === 0
+                      ? "No customers available"
+                      : selectedCustomer?.customer_name || "Select a customer"}
+                </button>
                 <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                {isCustomerDropdownOpen && (
+                  <div
+                    role="listbox"
+                    aria-labelledby="customer_dropdown"
+                    className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                  >
+                    {customers.map((customer) => {
+                      const isSelected = selectedCustomerId === String(customer.id);
+
+                      return (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => handleSelectCustomer(customer)}
+                          className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                            isSelected
+                              ? "bg-cyan-50 font-semibold text-cyan-700"
+                              : "text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {customer.customer_name}
+                        </button>
+                      );
+                    })}
+                    {nextCustomerPage && (
+                      <button
+                        type="button"
+                        onClick={handleLoadMoreCustomers}
+                        disabled={loadingMoreCustomers}
+                        className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-xs font-bold text-cyan-600 hover:bg-cyan-50 hover:text-cyan-700 disabled:text-slate-400 disabled:hover:bg-white"
+                      >
+                        {loadingMoreCustomers ? "Loading more customers..." : "Load more customers"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               {errors.customer && <p className="mt-1 text-xs text-red-500">{errors.customer.message}</p>}
               {customerError && <p className="mt-1 text-xs text-red-500">{customerError}</p>}
-              {nextCustomerPage && !loadingCustomers && (
-                <button
-                  type="button"
-                  onClick={handleLoadMoreCustomers}
-                  disabled={loadingMoreCustomers}
-                  className="mt-2 text-xs font-bold text-cyan-600 hover:text-cyan-700 disabled:text-slate-400"
-                >
-                  {loadingMoreCustomers ? "Loading more customers..." : "Load more customers"}
-                </button>
-              )}
             </div>
 
             {/* <div>
