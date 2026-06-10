@@ -32,22 +32,33 @@ export type NotificationSettingsPatch = Partial<
   >
 >;
 
+function isNotificationSettings(value: unknown): value is NotificationSettings {
+  if (!value || typeof value !== "object") return false;
+
+  const settings = value as Partial<NotificationSettings>;
+  return (
+    typeof settings.quote_accept === "boolean" &&
+    typeof settings.quote_reject === "boolean" &&
+    typeof settings.new_customer === "boolean"
+  );
+}
+
 export const getNotificationSettings =
-  async (): Promise<NotificationSettings> => {
-    const response = await apiClient.get<NotificationSettings>(
+  async (): Promise<NotificationSettings | null> => {
+    const response = await apiClient.get<unknown>(
       "/api/notifications/settings/"
     );
-    return response.data;
+    return isNotificationSettings(response.data) ? response.data : null;
   };
 
 export const updateNotificationSettings = async (
   payload: NotificationSettingsPatch
-): Promise<NotificationSettings> => {
-  const response = await apiClient.patch<NotificationSettings>(
+): Promise<NotificationSettings | null> => {
+  const response = await apiClient.patch<unknown>(
     "/api/notifications/settings/",
     payload
   );
-  return response.data;
+  return isNotificationSettings(response.data) ? response.data : null;
 };
 
 export const getNotifications = async (): Promise<NotificationListResponse> => {

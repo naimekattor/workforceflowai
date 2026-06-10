@@ -685,7 +685,7 @@ export default function AccountSettings() {
         quote_reject: notificationSettings.quote_reject,
         new_customer: notificationSettings.new_customer,
       });
-      setNotificationSettings(updatedSettings);
+      setNotificationSettings(updatedSettings ?? notificationSettings);
       await showSuccess('Notification settings saved successfully!');
     } catch (error) {
       console.error('Error saving notification settings:', error);
