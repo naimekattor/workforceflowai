@@ -113,7 +113,7 @@ function PricingPlanCard({ plan }: { plan: Plan }) {
         }
       >
         {popular && (
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-400 text-amber-950 text-xs font-semibold text-nowrap px-3 py-1 rounded-full uppercase ">
             Most Popular
           </div>
         )}
@@ -142,8 +142,8 @@ function PricingPlanCard({ plan }: { plan: Plan }) {
           planName={plan.name}
           className={
             popular
-              ? 'mt-auto block text-center w-full py-3 px-4 rounded-xl font-bold text-cyan-600 bg-white hover:bg-slate-50 transition-colors shadow-lg'
-              : 'mt-auto block text-center w-full py-3 px-4 rounded-xl font-semibold text-white bg-cyan-400 hover:bg-cyan-500 transition-colors'
+              ? 'mt-auto block text-center w-full py-3 px-4 rounded-xl font-semibold text-xs text-cyan-600 bg-white hover:bg-slate-50 transition-colors shadow-lg'
+              : 'mt-auto block text-center w-full py-3 px-4 rounded-xl font-semibold text-xs text-white bg-cyan-400 hover:bg-cyan-500 transition-colors'
           }
         >
           Choose {plan.name}
