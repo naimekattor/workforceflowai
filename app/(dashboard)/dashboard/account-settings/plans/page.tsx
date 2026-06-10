@@ -22,7 +22,8 @@ function formatPlanLabel(value: string) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function formatLimitValue(value: number | null) {
+function formatLimitValue(value: number | null | undefined) {
+  if (value === undefined) return "-";
   return value === null ? "Unlimited" : value.toLocaleString();
 }
 
