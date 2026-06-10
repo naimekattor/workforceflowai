@@ -29,12 +29,60 @@ function getStatusClassName(status: string) {
     : "bg-slate-100 text-slate-700";
 }
 
+function getNextJobPage(nextUrl: string | null): number | null {
+  if (!nextUrl) return null;
+
+  try {
+    const url = new URL(nextUrl, "http://localhost");
+    const page = Number(url.searchParams.get("page"));
+    return Number.isInteger(page) && page > 0 ? page : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeJobs(currentJobs: Job[], nextJobs: Job[]): Job[] {
+  const jobIds = new Set(currentJobs.map((job) => job.id));
+  const newJobs = nextJobs.filter((job) => !jobIds.has(job.id));
+
+  return [...currentJobs, ...newJobs];
+}
+
+async function getCustomerNamesForJobs(jobRows: Job[]): Promise<CustomerNameById> {
+  const customerIds = Array.from(
+    new Set(
+      jobRows
+        .filter((job) => !job.customer_name)
+        .map((job) => job.customer)
+        .filter(Boolean)
+    )
+  );
+
+  const customerResults = await Promise.allSettled(
+    customerIds.map(async (customerId) => {
+      const customer = await getCustomer(customerId);
+      return [customerId, customer.customer_name] as const;
+    })
+  );
+
+  return customerResults.reduce<CustomerNameById>((names, result) => {
+    if (result.status === "fulfilled") {
+      const [customerId, customerName] = result.value;
+      names[customerId] = customerName;
+    }
+
+    return names;
+  }, {});
+}
+
 export default function Jobs() {
   const { data: session, status } = useSession();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [customerNameById, setCustomerNameById] = useState<CustomerNameById>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [nextJobPage, setNextJobPage] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -45,6 +93,7 @@ export default function Jobs() {
 
     if (!session?.accessToken) {
       setLoading(false);
+      setNextJobPage(null);
       return;
     }
 
@@ -54,42 +103,20 @@ export default function Jobs() {
       try {
         setLoading(true);
         setErrorMessage("");
-        const data = await getJobs();
-        const customerIds = Array.from(
-          new Set(
-            data.results
-              .filter((job) => !job.customer_name)
-              .map((job) => job.customer)
-              .filter(Boolean)
-          )
-        );
-        const customerResults = await Promise.allSettled(
-          customerIds.map(async (customerId) => {
-            const customer = await getCustomer(customerId);
-            return [customerId, customer.customer_name] as const;
-          })
-        );
-        const loadedCustomerNames = customerResults.reduce<CustomerNameById>(
-          (names, result) => {
-            if (result.status === "fulfilled") {
-              const [customerId, customerName] = result.value;
-              names[customerId] = customerName;
-            }
-
-            return names;
-          },
-          {}
-        );
+        const data = await getJobs(1);
+        const loadedCustomerNames = await getCustomerNamesForJobs(data.results);
 
         if (isMounted) {
           setJobs(data.results);
           setTotalCount(data.count);
+          setNextJobPage(getNextJobPage(data.next));
           setCustomerNameById(loadedCustomerNames);
         }
       } catch (error) {
         console.error("Error fetching jobs:", error);
         if (isMounted) {
           setErrorMessage("Failed to load jobs");
+          setNextJobPage(null);
         }
       } finally {
         if (isMounted) {
@@ -125,6 +152,32 @@ export default function Jobs() {
       );
     });
   }, [customerNameById, jobs, searchTerm]);
+
+  const handleLoadMoreJobs = async () => {
+    if (!nextJobPage || loadingMore) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      setErrorMessage("");
+      const data = await getJobs(nextJobPage);
+      const loadedCustomerNames = await getCustomerNamesForJobs(data.results);
+
+      setJobs((currentJobs) => mergeJobs(currentJobs, data.results));
+      setCustomerNameById((currentNames) => ({
+        ...currentNames,
+        ...loadedCustomerNames,
+      }));
+      setTotalCount(data.count);
+      setNextJobPage(getNextJobPage(data.next));
+    } catch (error) {
+      console.error("Error loading more jobs:", error);
+      await showError("Failed to load more jobs");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleDelete = async (job: Job) => {
     const confirmed = await confirmAction({
@@ -259,10 +312,20 @@ export default function Jobs() {
         </div>
 
         {!loading && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-white">
+          <div className="px-6 py-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-[13px] text-slate-500">
               Showing {filteredJobs.length} of {totalCount} jobs
             </p>
+            {nextJobPage && (
+              <button
+                type="button"
+                onClick={handleLoadMoreJobs}
+                disabled={loadingMore}
+                className="inline-flex items-center justify-center self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#42a5f5] hover:bg-blue-500 transition-colors disabled:bg-slate-300"
+              >
+                {loadingMore ? "Loading more..." : "Load more jobs"}
+              </button>
+            )}
           </div>
         )}
       </div>

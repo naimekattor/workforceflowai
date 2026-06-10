@@ -10,13 +10,34 @@ import { getCustomers, Customer } from '@/lib/api/customers';
 import { useSession } from 'next-auth/react';
 import { confirmAction, showError, showSuccess } from '@/lib/ui/alerts';
 
+function getNextQuotePage(nextUrl: string | null): number | null {
+  if (!nextUrl) return null;
+
+  try {
+    const url = new URL(nextUrl, 'http://localhost');
+    const page = Number(url.searchParams.get('page'));
+    return Number.isInteger(page) && page > 0 ? page : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeQuotes(currentQuotes: Quote[], nextQuotes: Quote[]): Quote[] {
+  const quoteIds = new Set(currentQuotes.map((quote) => quote.id));
+  const newQuotes = nextQuotes.filter((quote) => !quoteIds.has(quote.id));
+
+  return [...currentQuotes, ...newQuotes];
+}
+
 export default function Quotes() {
   const { data: session } = useSession();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [totalCount, setTotalCount] = useState(0);
+  const [nextQuotePage, setNextQuotePage] = useState<number | null>(null);
 
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
@@ -31,14 +52,16 @@ export default function Quotes() {
     try {
       setLoading(true);
       const [quotesData, customersData] = await Promise.all([
-        getQuotes(),
-        getCustomers()
+        getQuotes(1),
+        getCustomers(1)
       ]);
       setQuotes(quotesData.results);
       setTotalCount(quotesData.count);
+      setNextQuotePage(getNextQuotePage(quotesData.next));
       setCustomers(customersData.results);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setNextQuotePage(null);
     } finally {
       setLoading(false);
     }
@@ -105,6 +128,25 @@ export default function Quotes() {
       await showError(errorMessage);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleLoadMoreQuotes = async () => {
+    if (!nextQuotePage || loadingMore) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      const data = await getQuotes(nextQuotePage);
+      setQuotes((currentQuotes) => mergeQuotes(currentQuotes, data.results));
+      setTotalCount(data.count);
+      setNextQuotePage(getNextQuotePage(data.next));
+    } catch (error) {
+      console.error('Error loading more quotes:', error);
+      await showError('Failed to load more quotes');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -234,10 +276,20 @@ export default function Quotes() {
 
         {/* Footer */}
         {!loading && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-white">
+          <div className="px-6 py-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-[13px] text-slate-500">
               Showing {filteredQuotes.length} of {totalCount} quotes
             </p>
+            {nextQuotePage && (
+              <button
+                type="button"
+                onClick={handleLoadMoreQuotes}
+                disabled={loadingMore}
+                className="inline-flex items-center justify-center self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors disabled:bg-slate-300"
+              >
+                {loadingMore ? 'Loading more...' : 'Load more quotes'}
+              </button>
+            )}
           </div>
         )}
       </div>

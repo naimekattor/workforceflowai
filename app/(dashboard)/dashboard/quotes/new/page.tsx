@@ -109,10 +109,12 @@ export default function AddQuote() {
   const [jobsHasMore, setJobsHasMore] = useState(false);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsLoadingMore, setJobsLoadingMore] = useState(false);
+  const [isJobDropdownOpen, setIsJobDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [vatRate, setVatRate] = useState(20);
   const [vatRateLoading, setVatRateLoading] = useState(true);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
+  const jobDropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -143,6 +145,8 @@ export default function AddQuote() {
   const selectedCustomer = customers.find(
     (customer) => customer.id === Number(selectedCustomerId)
   );
+  const selectedJobId = watch('job_type');
+  const selectedJob = jobs.find((job) => job.id === Number(selectedJobId));
 
   useEffect(() => {
     if (!isCustomerDropdownOpen) {
@@ -161,6 +165,24 @@ export default function AddQuote() {
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isCustomerDropdownOpen]);
+
+  useEffect(() => {
+    if (!isJobDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        jobDropdownRef.current &&
+        !jobDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsJobDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isJobDropdownOpen]);
 
   useEffect(() => {
     const fetchQuoteFormData = async () => {
@@ -238,6 +260,14 @@ export default function AddQuote() {
     }
   };
 
+  const handleSelectJob = (job: Job) => {
+    setValue('job_type', String(job.id), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    setIsJobDropdownOpen(false);
+  };
+
   const loadMoreJobs = async () => {
     try {
       setJobsLoadingMore(true);
@@ -246,6 +276,7 @@ export default function AddQuote() {
       setJobs((previousJobs) => [...previousJobs, ...getOpenJobs(data.results)]);
       setJobsPage(nextPage);
       setJobsHasMore(Boolean(data.next));
+      setIsJobDropdownOpen(true);
     } catch (error) {
       console.error('Error loading more jobs:', error);
       await showError('Failed to load more jobs.');
@@ -412,39 +443,77 @@ export default function AddQuote() {
 
             {/* Job Type */}
             <div>
-              <label htmlFor="job_type" className="block text-[13px] font-bold text-slate-800 mb-1.5">
+              <label htmlFor="job_type_dropdown" className="block text-[13px] font-bold text-slate-800 mb-1.5">
                Select Job *
               </label>
-              <select
+              <input
+                type="hidden"
                 id="job_type"
                 {...register("job_type", { required: "Job type is required" })}
-                disabled={jobsLoading || jobs.length === 0}
-                className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 appearance-none"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
-              >
-                <option value="" disabled>
+              />
+              <div ref={jobDropdownRef} className="relative">
+                <button
+                  type="button"
+                  id="job_type_dropdown"
+                  disabled={jobsLoading || jobs.length === 0}
+                  onClick={() =>
+                    setIsJobDropdownOpen((isOpen) => !isOpen)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      setIsJobDropdownOpen(false);
+                    }
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={isJobDropdownOpen}
+                  className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 pr-10 text-left text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 disabled:text-slate-400"
+                >
                   {jobsLoading
                     ? 'Loading jobs...'
                     : jobs.length === 0
                       ? 'No jobs available'
-                      : 'Select a job'}
-                </option>
-                {jobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title}
-                  </option>
-                ))}
-              </select>
-              {jobsHasMore && (
-                <button
-                  type="button"
-                  onClick={loadMoreJobs}
-                  disabled={jobsLoadingMore}
-                  className="mt-2 text-xs font-bold text-[#22d3ee] transition-colors hover:text-[#06b6d4] disabled:text-slate-400"
-                >
-                  {jobsLoadingMore ? 'Loading more...' : 'More'}
+                      : selectedJob?.title || 'Select a job'}
                 </button>
-              )}
+                <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                {isJobDropdownOpen && (
+                  <div
+                    role="listbox"
+                    aria-labelledby="job_type_dropdown"
+                    className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                  >
+                    {jobs.map((job) => {
+                      const isSelected = selectedJobId === String(job.id);
+
+                      return (
+                        <button
+                          key={job.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => handleSelectJob(job)}
+                          className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                            isSelected
+                              ? 'bg-cyan-50 font-semibold text-cyan-700'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {job.title}
+                        </button>
+                      );
+                    })}
+                    {jobsHasMore && (
+                      <button
+                        type="button"
+                        onClick={loadMoreJobs}
+                        disabled={jobsLoadingMore}
+                        className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-xs font-bold text-cyan-600 hover:bg-cyan-50 hover:text-cyan-700 disabled:text-slate-400 disabled:hover:bg-white"
+                      >
+                        {jobsLoadingMore ? 'Loading more...' : 'More'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               {errors.job_type && <p className="mt-1 text-xs text-red-500">{errors.job_type.message}</p>}
             </div>
 
