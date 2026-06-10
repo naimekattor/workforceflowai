@@ -51,11 +51,37 @@ function formatApiError(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong!";
 }
 
+function getNextCustomerPage(nextUrl: string | null): number | null {
+  if (!nextUrl) return null;
+
+  try {
+    const url = new URL(nextUrl, "http://localhost");
+    const page = Number(url.searchParams.get("page"));
+    return Number.isInteger(page) && page > 0 ? page : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeCustomers(
+  currentCustomers: Customer[],
+  nextCustomers: Customer[]
+): Customer[] {
+  const customerIds = new Set(currentCustomers.map((customer) => customer.id));
+  const newCustomers = nextCustomers.filter(
+    (customer) => !customerIds.has(customer.id)
+  );
+
+  return [...currentCustomers, ...newCustomers];
+}
+
 export default function AddJob() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
+  const [loadingMoreCustomers, setLoadingMoreCustomers] = useState(false);
+  const [nextCustomerPage, setNextCustomerPage] = useState<number | null>(null);
   const [customerError, setCustomerError] = useState("");
 
   const {
@@ -83,16 +109,21 @@ export default function AddJob() {
 
     if (!session?.accessToken) {
       setLoadingCustomers(false);
+      setNextCustomerPage(null);
       return;
     }
 
     const fetchCustomers = async () => {
       try {
+        setLoadingCustomers(true);
         setCustomerError("");
-        const data = await getCustomers();
+        const data = await getCustomers(1);
         setCustomers(data.results);
+        setNextCustomerPage(getNextCustomerPage(data.next));
       } catch (error) {
         console.error("Error fetching customers:", error);
+        setCustomers([]);
+        setNextCustomerPage(null);
         setCustomerError(formatApiError(error));
       } finally {
         setLoadingCustomers(false);
@@ -112,6 +143,27 @@ export default function AddJob() {
       shouldDirty: Boolean(selectedCustomerId),
     });
   }, [customers, selectedCustomerId, setValue]);
+
+  const handleLoadMoreCustomers = async () => {
+    if (!nextCustomerPage || loadingMoreCustomers) {
+      return;
+    }
+
+    try {
+      setLoadingMoreCustomers(true);
+      setCustomerError("");
+      const data = await getCustomers(nextCustomerPage);
+      setCustomers((currentCustomers) =>
+        mergeCustomers(currentCustomers, data.results)
+      );
+      setNextCustomerPage(getNextCustomerPage(data.next));
+    } catch (error) {
+      console.error("Error fetching more customers:", error);
+      setCustomerError(formatApiError(error));
+    } finally {
+      setLoadingMoreCustomers(false);
+    }
+  };
 
   const onSubmit: SubmitHandler<JobInput> = async (data) => {
     if (!session?.accessToken) {
@@ -207,6 +259,16 @@ export default function AddJob() {
               </div>
               {errors.customer && <p className="mt-1 text-xs text-red-500">{errors.customer.message}</p>}
               {customerError && <p className="mt-1 text-xs text-red-500">{customerError}</p>}
+              {nextCustomerPage && !loadingCustomers && (
+                <button
+                  type="button"
+                  onClick={handleLoadMoreCustomers}
+                  disabled={loadingMoreCustomers}
+                  className="mt-2 text-xs font-bold text-cyan-600 hover:text-cyan-700 disabled:text-slate-400"
+                >
+                  {loadingMoreCustomers ? "Loading more customers..." : "Load more customers"}
+                </button>
+              )}
             </div>
 
             {/* <div>

@@ -7,21 +7,49 @@ import { getCustomers, deleteCustomer, Customer } from '@/lib/api/customers';
 import { useSession } from 'next-auth/react';
 import { confirmAction, showError } from '@/lib/ui/alerts';
 
+function getNextCustomerPage(nextUrl: string | null): number | null {
+  if (!nextUrl) return null;
+
+  try {
+    const url = new URL(nextUrl, 'http://localhost');
+    const page = Number(url.searchParams.get('page'));
+    return Number.isInteger(page) && page > 0 ? page : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeCustomers(
+  currentCustomers: Customer[],
+  nextCustomers: Customer[]
+): Customer[] {
+  const customerIds = new Set(currentCustomers.map((customer) => customer.id));
+  const newCustomers = nextCustomers.filter(
+    (customer) => !customerIds.has(customer.id)
+  );
+
+  return [...currentCustomers, ...newCustomers];
+}
+
 export default function Customers() {
   const { data: session } = useSession();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [nextCustomerPage, setNextCustomerPage] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const data = await getCustomers();
+      const data = await getCustomers(1);
       setCustomers(data.results);
       setTotalCount(data.count);
+      setNextCustomerPage(getNextCustomerPage(data.next));
     } catch (error) {
       console.error('Error fetching customers:', error);
+      setNextCustomerPage(null);
     } finally {
       setLoading(false);
     }
@@ -49,6 +77,27 @@ export default function Customers() {
     } catch (error) {
       console.error('Error deleting customer:', error);
       await showError('Failed to delete customer');
+    }
+  };
+
+  const handleLoadMoreCustomers = async () => {
+    if (!nextCustomerPage || loadingMore) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      const data = await getCustomers(nextCustomerPage);
+      setCustomers((currentCustomers) =>
+        mergeCustomers(currentCustomers, data.results)
+      );
+      setTotalCount(data.count);
+      setNextCustomerPage(getNextCustomerPage(data.next));
+    } catch (error) {
+      console.error('Error fetching more customers:', error);
+      await showError('Failed to load more customers');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -168,10 +217,20 @@ export default function Customers() {
 
         {/* Footer */}
         {!loading && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-slate-500">
               Showing {filteredCustomers.length} of {totalCount} customers
             </p>
+            {nextCustomerPage && (
+              <button
+                type="button"
+                onClick={handleLoadMoreCustomers}
+                disabled={loadingMore}
+                className="inline-flex items-center justify-center self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors disabled:bg-slate-300"
+              >
+                {loadingMore ? 'Loading more...' : 'Load more customers'}
+              </button>
+            )}
           </div>
         )}
       </div>
