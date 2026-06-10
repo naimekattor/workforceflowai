@@ -106,8 +106,9 @@ const ContactSection = () => {
                 <div className="text-cyan-500">
                   <Mail size={20} />
                 </div>
-                <a href="mailto:support@revboostai.com" className="hover:text-cyan-600 transition-colors">
-                  info@revboostai.net
+                <a href="mailto:official@mail.workforceflow.ai" className="hover:text-cyan-600 transition-colors">
+                  {/* info@revboostai.net */}
+                  official@mail.workforceflow.ai
                 </a>
               </div>
 
