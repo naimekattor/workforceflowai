@@ -2,20 +2,15 @@ import apiClient from "./axios";
 
 export interface Invoice {
   id: number;
-  owner?: number;
+  owner: number;
   customer: number;
   customer_name?: string;
   invoice_number: string;
-  issue_date?: string;
-  due_date?: string;
-  price?: string | number;
-  status?: string;
-  invoice_uuid?: string;
-  quote_uuid?: string;
-  quote_status?: string;
-  total_price?: string | number;
-  created_at?: string;
-  updated_at?: string;
+  issue_date: string;
+  due_date: string;
+  price: string;
+  status: string;
+  invoice_uuid: string;
 }
 
 export interface InvoiceListResponse {

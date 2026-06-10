@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { getRecentInvoices, RecentInvoice } from '@/lib/api/dashboard';
 import { getCustomer } from '@/lib/api/customers';
-import { getInvoices, Invoice } from '@/lib/api/invoices';
 import { formatCurrency } from '@/lib/invoices';
 
 type CustomerNameById = Record<number, string>;
@@ -24,20 +24,8 @@ function formatAmount(value?: string | number) {
   return formatCurrency(Number.isNaN(amount) ? 0 : amount);
 }
 
-function getCustomerLabel(invoice: Invoice, customerNameById: CustomerNameById) {
+function getCustomerLabel(invoice: RecentInvoice, customerNameById: CustomerNameById) {
   return invoice.customer_name || customerNameById[invoice.customer] || `Customer ID: ${invoice.customer}`;
-}
-
-function getInvoiceReference(invoice: Invoice) {
-  return invoice.quote_uuid || invoice.invoice_uuid || '-';
-}
-
-function getInvoiceStatus(invoice: Invoice) {
-  return invoice.quote_status || invoice.status || '-';
-}
-
-function getInvoiceDate(invoice: Invoice) {
-  return invoice.created_at || invoice.issue_date;
 }
 
 function getStatusClassName(status: string) {
@@ -47,68 +35,12 @@ function getStatusClassName(status: string) {
   return 'bg-slate-100 text-slate-700';
 }
 
-function getNextInvoicePage(nextUrl: string | null): number | null {
-  if (!nextUrl) return null;
-
-  try {
-    const url = new URL(nextUrl, 'http://localhost');
-    const page = Number(url.searchParams.get('page'));
-    return Number.isInteger(page) && page > 0 ? page : null;
-  } catch {
-    return null;
-  }
-}
-
-function mergeInvoices(
-  currentInvoices: Invoice[],
-  nextInvoices: Invoice[]
-): Invoice[] {
-  const invoiceIds = new Set(currentInvoices.map((invoice) => invoice.id));
-  const newInvoices = nextInvoices.filter(
-    (invoice) => !invoiceIds.has(invoice.id)
-  );
-
-  return [...currentInvoices, ...newInvoices];
-}
-
-async function getCustomerNamesForInvoices(
-  invoiceRows: Invoice[]
-): Promise<CustomerNameById> {
-  const customerIds = Array.from(
-    new Set(
-      invoiceRows
-        .filter((invoice) => !invoice.customer_name)
-        .map((invoice) => invoice.customer)
-        .filter(Boolean)
-    )
-  );
-
-  const customerResults = await Promise.allSettled(
-    customerIds.map(async (customerId) => {
-      const customer = await getCustomer(customerId);
-      return [customerId, customer.customer_name] as const;
-    })
-  );
-
-  return customerResults.reduce<CustomerNameById>((names, result) => {
-    if (result.status === 'fulfilled') {
-      const [customerId, customerName] = result.value;
-      names[customerId] = customerName;
-    }
-
-    return names;
-  }, {});
-}
-
 export default function Invoices() {
   const { data: session, status } = useSession();
   const [query, setQuery] = useState('');
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<RecentInvoice[]>([]);
   const [customerNameById, setCustomerNameById] = useState<CustomerNameById>({});
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
-  const [nextInvoicePage, setNextInvoicePage] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -118,7 +50,6 @@ export default function Invoices() {
 
     if (!session?.accessToken) {
       setLoading(false);
-      setNextInvoicePage(null);
       return;
     }
 
@@ -128,20 +59,42 @@ export default function Invoices() {
       try {
         setLoading(true);
         setErrorMessage('');
-        const data = await getInvoices(1);
-        const loadedCustomerNames = await getCustomerNamesForInvoices(data.results);
+        const data = await getRecentInvoices();
+        const invoiceRows = Array.isArray(data) ? data : [];
+        const customerIds = Array.from(
+          new Set(
+            invoiceRows
+              .filter((invoice) => !invoice.customer_name)
+              .map((invoice) => invoice.customer)
+              .filter(Boolean)
+          )
+        );
+        const customerResults = await Promise.allSettled(
+          customerIds.map(async (customerId) => {
+            const customer = await getCustomer(customerId);
+            return [customerId, customer.customer_name] as const;
+          })
+        );
+        const loadedCustomerNames = customerResults.reduce<CustomerNameById>(
+          (names, result) => {
+            if (result.status === 'fulfilled') {
+              const [customerId, customerName] = result.value;
+              names[customerId] = customerName;
+            }
+
+            return names;
+          },
+          {}
+        );
 
         if (isMounted) {
-          setInvoices(data.results);
-          setTotalCount(data.count);
-          setNextInvoicePage(getNextInvoicePage(data.next));
+          setInvoices(invoiceRows);
           setCustomerNameById(loadedCustomerNames);
         }
       } catch (error) {
         console.error('Error fetching invoices:', error);
         if (isMounted) {
           setErrorMessage('Failed to load invoices');
-          setNextInvoicePage(null);
         }
       } finally {
         if (isMounted) {
@@ -167,10 +120,10 @@ export default function Invoices() {
     return invoices.filter((invoice) => {
       const searchableValues = [
         invoice.invoice_number,
-        getInvoiceReference(invoice),
-        getInvoiceStatus(invoice),
+        invoice.quote_uuid,
+        invoice.quote_status,
         getCustomerLabel(invoice, customerNameById),
-        invoice.total_price ?? invoice.price,
+        invoice.total_price,
       ];
 
       return searchableValues.some((value) =>
@@ -178,34 +131,6 @@ export default function Invoices() {
       );
     });
   }, [customerNameById, invoices, query]);
-
-  const handleLoadMoreInvoices = async () => {
-    if (!nextInvoicePage || loadingMore) {
-      return;
-    }
-
-    try {
-      setLoadingMore(true);
-      setErrorMessage('');
-      const data = await getInvoices(nextInvoicePage);
-      const loadedCustomerNames = await getCustomerNamesForInvoices(data.results);
-
-      setInvoices((currentInvoices) =>
-        mergeInvoices(currentInvoices, data.results)
-      );
-      setCustomerNameById((currentNames) => ({
-        ...currentNames,
-        ...loadedCustomerNames,
-      }));
-      setTotalCount(data.count);
-      setNextInvoicePage(getNextInvoicePage(data.next));
-    } catch (error) {
-      console.error('Error loading more invoices:', error);
-      setErrorMessage('Failed to load more invoices');
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">
@@ -276,20 +201,20 @@ export default function Invoices() {
                       {getCustomerLabel(invoice, customerNameById)}
                     </td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">
-                      <span className="inline-block max-w-[220px] truncate align-bottom" title={getInvoiceReference(invoice)}>
-                        {getInvoiceReference(invoice)}
+                      <span className="inline-block max-w-[220px] truncate align-bottom" title={invoice.quote_uuid}>
+                        {invoice.quote_uuid}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(getInvoiceStatus(invoice))}`}>
-                        {getInvoiceStatus(invoice)}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(invoice.quote_status)}`}>
+                        {invoice.quote_status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[13px] font-bold text-slate-900">
-                      {formatAmount(invoice.total_price ?? invoice.price)}
+                      {formatAmount(invoice.total_price)}
                     </td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">
-                      {formatDateTime(getInvoiceDate(invoice))}
+                      {formatDateTime(invoice.created_at)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link
@@ -308,20 +233,10 @@ export default function Invoices() {
         </div>
 
         {!loading && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="px-6 py-4 border-t border-slate-100 bg-white">
             <p className="text-[13px] text-slate-500">
-              Showing {filteredInvoices.length} of {totalCount} invoices
+              Showing {filteredInvoices.length} of {invoices.length} invoices
             </p>
-            {nextInvoicePage && (
-              <button
-                type="button"
-                onClick={handleLoadMoreInvoices}
-                disabled={loadingMore}
-                className="inline-flex items-center justify-center self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors disabled:bg-slate-300"
-              >
-                {loadingMore ? 'Loading more...' : 'Load more invoices'}
-              </button>
-            )}
           </div>
         )}
       </div>
