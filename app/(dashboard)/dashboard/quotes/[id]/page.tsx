@@ -275,7 +275,23 @@ export default function QuoteDetails() {
           <h2 className="text-lg font-bold text-slate-900">Notes & Payment</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <DetailRow label="Payment Note" value={quote.payment_note || 'No payment note added.'} muted={!quote.payment_note} />
+          <DetailRow 
+            label="Payment Terms" 
+            value={(() => {
+              if (!quote.payment_style) {
+                return quote.payment_note || 'No payment terms added.';
+              }
+              if (quote.payment_style === 'Split') {
+                const percentage = quote.split_percentage ? `${parseFloat(quote.split_percentage.toString())}%` : '';
+                return `Split ${percentage ? `(${percentage})` : ''}`.trim();
+              }
+              if (quote.payment_style === 'On_Completion') {
+                return 'On Completion';
+              }
+              return quote.payment_style; // e.g. Advance
+            })()} 
+            muted={!quote.payment_style && !quote.payment_note} 
+          />
           <DetailRow label="Notes" value={quote.notes || 'No notes added.'} muted={!quote.notes} />
         </div>
       </div>

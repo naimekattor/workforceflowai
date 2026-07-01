@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, Search } from 'lucide-react';
+import { Eye, Search, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getRecentInvoices, RecentInvoice } from '@/lib/api/dashboard';
 import { getCustomer } from '@/lib/api/customers';
 import { formatCurrency } from '@/lib/invoices';
+import { sendInvoiceEmail } from '@/lib/api/invoices';
+import { showError, showSuccess } from '@/lib/ui/alerts';
 
 type CustomerNameById = Record<number, string>;
 
@@ -132,6 +134,16 @@ export default function Invoices() {
     });
   }, [customerNameById, invoices, query]);
 
+  const handleSendInvoice = async (invoiceId: number) => {
+    try {
+      await sendInvoiceEmail(invoiceId);
+      await showSuccess("Invoice email sent successfully!");
+    } catch (error) {
+      console.error("Error sending invoice:", error);
+      await showError("Failed to send invoice email.");
+    }
+  };
+
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -224,6 +236,14 @@ export default function Invoices() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleSendInvoice(invoice.id)}
+                        className="inline-flex p-1.5 text-cyan-600 hover:text-cyan-700 transition-colors"
+                        aria-label={`Send invoice ${invoice.invoice_number || invoice.id}`}
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))

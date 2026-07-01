@@ -19,9 +19,7 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
 }
 
-function getCustomerLabel(job: Job, customerNameById: CustomerNameById) {
-  return job.customer_name || customerNameById[job.customer] || `Customer ID: ${job.customer}`;
-}
+
 
 function getStatusClassName(status: string) {
   return status === "Open"
@@ -54,7 +52,7 @@ async function getCustomerNamesForJobs(jobRows: Job[]): Promise<CustomerNameById
       jobRows
         .filter((job) => !job.customer_name)
         .map((job) => job.customer)
-        .filter(Boolean)
+        .filter((id): id is number => typeof id === "number")
     )
   );
 
@@ -144,7 +142,6 @@ export default function Jobs() {
         job.title,
         job.site_address,
         job.jobstatus,
-        getCustomerLabel(job, customerNameById),
       ];
 
       return values.some((value) =>
@@ -242,7 +239,6 @@ export default function Jobs() {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Job Title</th>
-                <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Customer</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Site Address</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Status</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Date Created</th>
@@ -270,7 +266,6 @@ export default function Jobs() {
                         {job.title}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-[13px] text-slate-700">{getCustomerLabel(job, customerNameById)}</td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">{job.site_address || "-"}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(job.jobstatus)}`}>

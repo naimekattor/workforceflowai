@@ -138,7 +138,7 @@ export default function Step3TaxRegistration() {
             <SectionBox title="PAYE (Pay As You Earn)">
               <ToggleRow
                 label="PAYE Registered"
-                required
+                
                 checked={data.payeRegistered}
                 onChange={(v) => update("payeRegistered", v)}
               />
@@ -156,7 +156,7 @@ export default function Step3TaxRegistration() {
             </SectionBox>
 
             {/* Accounting Method ───────────────────────────────────────────── */}
-            <SectionBox title="Accounting Method *">
+            <SectionBox title="Accounting Method ">
               <SelectField
                 value={data.accountingMethod}
                 onChange={(e) =>
@@ -172,10 +172,10 @@ export default function Step3TaxRegistration() {
               />
             </SectionBox>
 
-            <InfoBanner>
+            {/* <InfoBanner>
               <strong>Coming soon:</strong> Real-time validation via Companies
               House and HMRC APIs will be available in a future update.
-            </InfoBanner>
+            </InfoBanner> */}
           </div>
         </CardBody>
 

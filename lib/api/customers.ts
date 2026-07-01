@@ -43,3 +43,10 @@ export const updateCustomer = async (id: number | string, data: Partial<Customer
 export const deleteCustomer = async (id: number): Promise<void> => {
   await apiClient.delete(`/api/customer/${id}/`);
 };
+
+export const searchCustomersByName = async (name: string): Promise<Customer[]> => {
+  const response = await apiClient.get<Customer[]>("/api/customers/", {
+    params: { name },
+  });
+  return response.data;
+};

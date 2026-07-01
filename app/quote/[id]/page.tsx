@@ -121,6 +121,8 @@ export default async function PublicQuotePage({
   const { status } = await searchParams;
   const result = await getPublicQuote(id);
 
+  console.log("Result:", result);
+
   if (!result.ok) {
     const message =
       result.status === 401
@@ -135,6 +137,15 @@ export default async function PublicQuotePage({
   const customerLabel = quote.customer_name || "Customer";
   const totalAmount = parseAmount(quote.total_price || quote.price);
   const paymentStatus = getSearchParamValue(status);
+
+  let paymentStyleLabel = "Not provided";
+  if (quote.payment_style === "On_Completion") {
+    paymentStyleLabel = "On Completion";
+  } else if (quote.payment_style === "Advance") {
+    paymentStyleLabel = "Advance";
+  } else if (quote.payment_style === "Split") {
+    paymentStyleLabel = `Split (${quote.split_percentage ? `${quote.split_percentage}%` : "-"})`;
+  }
 
   return (
     <main className="min-h-screen bg-[#f8fafc] px-4 py-6 sm:px-6 lg:py-10">
@@ -192,12 +203,12 @@ export default async function PublicQuotePage({
           />
           <SummaryCard
             icon={Briefcase}
-            label="Job Type"
-            value={quote.job_type || "No job"}
+            label="Job Title"
+            value={quote.job_details?.title || quote.job_type || "No job"}
           />
         </section>
 
-        <section className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className={`mb-6 grid grid-cols-1 gap-6 ${quote.job_details ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-2">
               <ReceiptText className="h-4 w-4 text-slate-400" />
@@ -207,7 +218,6 @@ export default async function PublicQuotePage({
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <DetailRow label="Quote Number" value={quote.invoice_number} />
-              <DetailRow label="Job Type" value={quote.job_type || "No job"} />
               <DetailRow
                 label="Created"
                 value={formatDateTime(quote.created_at)}
@@ -231,13 +241,27 @@ export default async function PublicQuotePage({
                 value={quote.customer_email || "Not provided"}
                 muted={!quote.customer_email}
               />
-              <DetailRow label="Quote Date" value={formatDate(quote.quote_date)} />
-              <DetailRow
-                label="Valid Until"
-                value={formatDate(quote.valid_until)}
-              />
             </div>
           </div>
+
+          {quote.job_details && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-slate-400" />
+                <h2 className="text-lg font-bold text-slate-900">Job Details</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <DetailRow label="Job Title" value={quote.job_details.title || "Not provided"} />
+                <DetailRow label="Status" value={quote.job_details.jobstatus || "Not provided"} />
+                <div className="sm:col-span-2">
+                  <DetailRow label="Site Address" value={quote.job_details.site_address || "Not provided"} />
+                </div>
+                <div className="sm:col-span-2">
+                  <DetailRow label="Job Description" value={quote.job_details.notes || "No description provided."} />
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -247,12 +271,12 @@ export default async function PublicQuotePage({
               Notes & Payment
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             <DetailRow
-              label="Payment Note"
-              value={quote.payment_note || "No payment note added."}
-              muted={!quote.payment_note}
+              label="Payment Terms"
+              value={paymentStyleLabel}
             />
+            
             <DetailRow
               label="Notes"
               value={quote.notes || "No notes added."}

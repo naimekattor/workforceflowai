@@ -332,7 +332,7 @@ function validateOnboardingData(data: OnboardingData): ValidationIssue[] {
       businessRoute
     );
     addIssue(issues, !clean(data.lc_phone), 'Company phone number', businessRoute);
-    addIssue(issues, !clean(data.lc_corpTaxUtr), 'Corporation Tax UTR', businessRoute);
+    // addIssue(issues, !clean(data.lc_corpTaxUtr), 'Corporation Tax UTR', businessRoute);
   } else if (data.businessType === 'partnership') {
     addIssue(issues, !clean(data.p_partnershipName), 'Partnership name', businessRoute);
     addIssue(issues, !clean(data.p_address), 'Partnership address', businessRoute);
@@ -432,6 +432,7 @@ function appendCommonFields(formData: FormData, data: OnboardingData) {
   appendValue(formData, 'invoice_number_format', data.invoiceFormat);
   appendValue(formData, 'currency', 'GBP');
   appendValue(formData, 'tax_display', data.taxDisplay === 'inclusive' ? 'Inclusive' : 'Exclusive');
+  appendValue(formData, 'default_payment_terms', data.paymentTermsDays);
 
   if (data.logoFile) {
     formData.append('company_logo', data.logoFile);

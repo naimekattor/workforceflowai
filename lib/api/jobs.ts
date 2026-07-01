@@ -8,7 +8,7 @@ export interface Job {
   title: string;
   site_address: string;
   notes: string;
-  customer: number;
+  customer?: number;
   customer_name?: string;
   created_at?: string;
   updated_at?: string;
@@ -26,7 +26,7 @@ export interface CreateJobPayload {
   title: string;
   site_address: string;
   notes: string;
-  customer: number;
+  customer?: number;
 }
 
 export type UpdateJobPayload = Partial<CreateJobPayload>;

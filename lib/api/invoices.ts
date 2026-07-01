@@ -31,3 +31,9 @@ export const getInvoiceDetail = async (id: number | string): Promise<unknown> =>
   const response = await apiClient.get(`/api/invoice/detail/${id}/`);
   return response.data;
 };
+
+export const sendInvoiceEmail = async (invoiceId: number): Promise<void> => {
+  await apiClient.post("/api/dashboard/send-invoice-email/", {
+    quote_id: invoiceId,
+  });
+};

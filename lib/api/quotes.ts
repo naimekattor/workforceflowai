@@ -12,11 +12,14 @@ export interface Quote {
   quote_uuid: string;
   job_type: string;
   job_title?: string;
-  job_details?:  { id?: number; title?: string ,site_address?:string,notes?:string,jobstatus?:string} | null;
+  job_details?: { id?: number; title?: string, site_address?: string, notes?: string, jobstatus?: string } | null;
+  job_post?: number | null;
   quote_date: string;
   valid_until: string;
   deposit: string;
-  payment_note: string;
+  payment_note?: string;
+  payment_style?: 'Advance' | 'Split' | 'On_Completion' | null;
+  split_percentage?: number | null;
   notes: string;
   invoice_number: string;
   created_at: string;

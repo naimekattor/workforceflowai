@@ -167,7 +167,7 @@ const preferenceFields: BusinessField[] = [
       { value: 'Inclusive', label: 'Inclusive' },
     ],
   },
-  { name: 'default_payment_terms', label: 'Default Payment Terms', type: 'number' },
+  { name: 'default_payment_terms', label: 'Default Quotation Validity', type: 'number' },
 ];
 
 const vatSchemeOptions = [
@@ -209,7 +209,7 @@ function buildBusinessPayload(business: BusinessDetails): Partial<BusinessDetail
 
   Object.entries(business).forEach(([key, value]) => {
     if (!readOnlyBusinessFields.has(key)) {
-      payload[key] = value as string | number | boolean | null | undefined;
+      payload[key] = key === 'default_payment_terms' && value ? Number(value) : (value as string | number | boolean | null | undefined);
     }
   });
 

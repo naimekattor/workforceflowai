@@ -33,9 +33,7 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
 }
 
-function getCustomerLabel(job: Job) {
-  return job.customer_name || `Customer ID: ${job.customer}`;
-}
+
 
 async function getJobWithCustomerName(id: string) {
   const job = await getJob(id);
@@ -182,13 +180,7 @@ export default function JobDetails() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-lg font-bold text-slate-900 mb-6">Job Information</h2>
           <div className="space-y-5">
-            <div className="flex items-start gap-3">
-              <User className="w-4 h-4 mt-0.5 text-slate-400" />
-              <div>
-                <p className="text-[13px] text-slate-500 mb-1">Customer</p>
-                <p className="text-[14px] font-medium text-slate-900">{getCustomerLabel(job)}</p>
-              </div>
-            </div>
+            
             <div className="flex items-start gap-3">
               <MapPin className="w-4 h-4 mt-0.5 text-slate-400" />
               <div>
@@ -216,12 +208,12 @@ export default function JobDetails() {
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">Notes</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-6">Job Description</h2>
           <div className="flex items-start gap-3">
             <FileText className="w-4 h-4 mt-0.5 text-slate-400" />
             <div>
-              <p className="text-[13px] text-slate-500 mb-1">Job Notes</p>
-              <p className="text-[14px] font-medium text-slate-900">{job.notes || "No notes added."}</p>
+              <p className="text-[13px] text-slate-500 mb-1">Description</p>
+              <p className="text-[14px] font-medium text-slate-900">{job.notes || "No description provided."}</p>
             </div>
           </div>
         </div>

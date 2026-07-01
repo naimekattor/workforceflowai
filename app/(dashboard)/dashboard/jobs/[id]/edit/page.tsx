@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { useSession } from "next-auth/react";
-import { Customer, getCustomers } from "@/lib/api/customers";
 import { getJob, Job, JobStatus, updateJob } from "@/lib/api/jobs";
 import { showError } from "@/lib/ui/alerts";
 
@@ -15,7 +14,6 @@ type JobFormInput = {
   title: string;
   site_address: string;
   notes: string;
-  customer: string;
 };
 
 function getErrorMessage(error: unknown): string {
@@ -61,7 +59,6 @@ export default function EditJob() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [job, setJob] = useState<Job | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -94,23 +91,18 @@ export default function EditJob() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        const [jobData, customersData] = await Promise.all([
-          getJob(id),
-          getCustomers(),
-        ]);
+        const jobData = await getJob(id);
 
         if (!isMounted) {
           return;
         }
 
         setJob(jobData);
-        setCustomers(customersData.results);
         reset({
           jobstatus: jobData.jobstatus || "Open",
           title: jobData.title || "",
           site_address: jobData.site_address || "",
           notes: jobData.notes || "",
-          customer: String(jobData.customer),
         });
       } catch (error) {
         if (isMounted) {
@@ -133,13 +125,6 @@ export default function EditJob() {
   const currentStatus = watch("jobstatus");
   const hasCurrentStatusOption =
     currentStatus === "Open" || currentStatus === "Closed";
-  const hasSelectedCustomer = useMemo(() => {
-    if (!job) {
-      return true;
-    }
-
-    return customers.some((customer) => customer.id === job.customer);
-  }, [customers, job]);
 
   const onSubmit: SubmitHandler<JobFormInput> = async (data) => {
     try {
@@ -148,7 +133,6 @@ export default function EditJob() {
         title: data.title,
         site_address: data.site_address,
         notes: data.notes || "",
-        customer: Number(data.customer),
       });
 
       router.push(`/dashboard/jobs/${id}`);
@@ -203,54 +187,25 @@ export default function EditJob() {
               {errors.title && <p className="mt-1.5 text-xs text-red-500">{errors.title.message}</p>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="customer" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-                  Customer *
-                </label>
-                <div className="relative">
-                  <select
-                    id="customer"
-                    {...register("customer", { required: "Customer is required" })}
-                    className={selectClassName}
-                    disabled={!job}
-                  >
-                    {!hasSelectedCustomer && job && (
-                      <option value={job.customer}>
-                        {job.customer_name || `Customer ID: ${job.customer}`}
-                      </option>
-                    )}
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.customer_name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
-                {errors.customer && <p className="mt-1.5 text-xs text-red-500">{errors.customer.message}</p>}
+            <div>
+              <label htmlFor="jobstatus" className="block text-[13px] font-bold text-slate-800 mb-1.5">
+                Status 
+              </label>
+              <div className="relative">
+                <select
+                  id="jobstatus"
+                  {...register("jobstatus", { required: "Status is required" })}
+                  className={selectClassName}
+                >
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                  {!hasCurrentStatusOption && currentStatus && (
+                    <option value={currentStatus}>{currentStatus}</option>
+                  )}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
-
-              <div>
-                <label htmlFor="jobstatus" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-                  Status 
-                </label>
-                <div className="relative">
-                  <select
-                    id="jobstatus"
-                    {...register("jobstatus", { required: "Status is required" })}
-                    className={selectClassName}
-                  >
-                    <option value="Open">Open</option>
-                    <option value="Closed">Closed</option>
-                    {!hasCurrentStatusOption && currentStatus && (
-                      <option value={currentStatus}>{currentStatus}</option>
-                    )}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
-                {errors.jobstatus && <p className="mt-1.5 text-xs text-red-500">{errors.jobstatus.message}</p>}
-              </div>
+              {errors.jobstatus && <p className="mt-1.5 text-xs text-red-500">{errors.jobstatus.message}</p>}
             </div>
 
             <div>
@@ -269,12 +224,12 @@ export default function EditJob() {
 
             <div>
               <label htmlFor="notes" className="block text-[13px] font-bold text-slate-800 mb-1.5">
-                Notes (Optional)
+                Job Description
               </label>
               <textarea
                 id="notes"
                 rows={4}
-                placeholder="Additional information about this job..."
+                placeholder="Information about this job..."
                 {...register("notes")}
                 className={`${inputClassName} resize-none py-3`}
               />

@@ -178,8 +178,8 @@ export default function Step5Preferences() {
               onChange={v => update('taxDisplay', v)}
             />
             <SelectField
-  label="Default Payment Terms (days)"
-  value={String(data.paymentTermsDays ?? 1)} 
+  label="Default Quotation Validity (days)"
+  value={String(data.paymentTermsDays ?? 1)}
   onChange={e => update('paymentTermsDays', Number(e.target.value))}
   options={[
     { value: '1', label: '1 day' },
