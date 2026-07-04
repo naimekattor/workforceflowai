@@ -259,7 +259,7 @@ export default function EditCustomer() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#42a5f5] hover:bg-blue-500 transition-colors disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>

@@ -163,7 +163,7 @@ export default function AddJob() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#42a5f5] hover:bg-blue-500 transition-colors disabled:bg-slate-300"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors disabled:bg-slate-300"
             >
               {isSubmitting ? "Creating..." : "Create Job"}
             </button>

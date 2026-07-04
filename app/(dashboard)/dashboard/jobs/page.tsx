@@ -205,7 +205,7 @@ export default function Jobs() {
           <p className="text-slate-500 text-sm">Manage your job records</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/jobs/new" className="flex items-center gap-2 bg-[#42a5f5] hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          <Link href="/dashboard/jobs/new" className="flex items-center gap-2 bg-[#22d3ee] hover:bg-[#06b6d4] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             <Plus className="w-4 h-4" />
             Create Job
           </Link>
@@ -316,7 +316,7 @@ export default function Jobs() {
                 type="button"
                 onClick={handleLoadMoreJobs}
                 disabled={loadingMore}
-                className="inline-flex items-center justify-center self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#42a5f5] hover:bg-blue-500 transition-colors disabled:bg-slate-300"
+                className="inline-flex items-center justify-center self-start sm:self-auto px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors disabled:bg-slate-300"
               >
                 {loadingMore ? "Loading more..." : "Load more jobs"}
               </button>

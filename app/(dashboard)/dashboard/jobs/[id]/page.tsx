@@ -159,7 +159,7 @@ export default function JobDetails() {
         <div className="flex items-center gap-2 md:ml-auto">
           <Link
             href={`/dashboard/jobs/${id}/edit`}
-            className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#42a5f5] px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
+            className="inline-flex w-fit items-center gap-2 rounded-lg  px-4 py-2 text-sm font-medium text-white bg-[#22d3ee] hover:bg-[#06b6d4] transition-colors"
           >
             <Edit className="w-4 h-4" />
             Edit

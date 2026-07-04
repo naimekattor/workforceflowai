@@ -593,7 +593,7 @@ export default function AddQuote() {
                                   shouldDirty: true,
                                 });
                               }}
-                              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#42a5f5] hover:bg-blue-500 rounded-md transition-colors shadow-sm"
+                              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#22d3ee] hover:bg-[#06b6d4] rounded-md transition-colors shadow-sm"
                             >
                               <Plus className="w-3 h-3" />
                               Add "{customerSearch}"
