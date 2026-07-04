@@ -137,6 +137,7 @@ export default function AddQuote() {
     register: registerModalCustomer,
     handleSubmit: handleModalCustomerSubmit,
     reset: resetModalCustomer,
+    setValue: setModalCustomerValue,
     formState: { errors: modalCustomerErrors, isSubmitting: isModalCustomerSubmitting },
   } = useForm<CustomerFormInput>({
     defaultValues: {
@@ -362,6 +363,13 @@ export default function AddQuote() {
   }, [session]);
 
   const handleSelectCustomer = (customer: Customer) => {
+    setCustomers((prev) => {
+      if (!prev.some((c) => c.id === customer.id)) {
+        return [customer, ...prev];
+      }
+      return prev;
+    });
+
     setValue('customer', String(customer.id), {
       shouldValidate: true,
       shouldDirty: true,
@@ -580,6 +588,10 @@ export default function AddQuote() {
                               onClick={() => {
                                 setIsCustomerDropdownOpen(false);
                                 setIsCreateCustomerModalOpen(true);
+                                setModalCustomerValue('customer_name', customerSearch, {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                });
                               }}
                               className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#42a5f5] hover:bg-blue-500 rounded-md transition-colors shadow-sm"
                             >

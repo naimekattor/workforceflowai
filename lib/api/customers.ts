@@ -45,8 +45,8 @@ export const deleteCustomer = async (id: number): Promise<void> => {
 };
 
 export const searchCustomersByName = async (name: string): Promise<Customer[]> => {
-  const response = await apiClient.get<Customer[]>("/api/customers/", {
+  const response = await apiClient.get<CustomerListResponse>("/api/customer/list/", {
     params: { name },
   });
-  return response.data;
+  return response.data.results;
 };
