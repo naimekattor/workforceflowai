@@ -8,7 +8,7 @@ import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
 import { getBillingVatRate } from '@/lib/api/billing';
 import { getCustomers, Customer, createCustomer, searchCustomersByName } from '@/lib/api/customers';
-import { getJobs, Job } from '@/lib/api/jobs';
+import { getJobs, Job, createJob, searchJobsByTitle } from '@/lib/api/jobs';
 import { createQuote, createLineItem } from '@/lib/api/quotes';
 import { formatCurrency } from '@/lib/invoices';
 import { showError, showInfo, showSuccess } from '@/lib/ui/alerts';
@@ -22,6 +22,12 @@ type CustomerFormInput = {
   billing_address: string;
   site_address: string;
   notes?: string;
+};
+
+type JobFormInput = {
+  title: string;
+  site_address: string;
+  notes: string;
 };
 
 type LineItemInput = {
@@ -126,6 +132,10 @@ export default function AddQuote() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsLoadingMore, setJobsLoadingMore] = useState(false);
   const [isJobDropdownOpen, setIsJobDropdownOpen] = useState(false);
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+  const [jobSearch, setJobSearch] = useState('');
+  const [isSearchingJobs, setIsSearchingJobs] = useState(false);
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [vatRate, setVatRate] = useState(20);
   const [vatRateLoading, setVatRateLoading] = useState(true);
@@ -146,6 +156,16 @@ export default function AddQuote() {
       site_address: '',
       notes: '',
     }
+  });
+
+  const {
+    register: registerModalJob,
+    handleSubmit: handleModalJobSubmit,
+    reset: resetModalJob,
+    setValue: setModalJobValue,
+    formState: { errors: modalJobErrors, isSubmitting: isModalJobSubmitting },
+  } = useForm<JobFormInput>({
+    defaultValues: { title: '', site_address: '', notes: '' },
   });
 
   const {
@@ -280,6 +300,7 @@ export default function AddQuote() {
         !jobDropdownRef.current.contains(event.target as Node)
       ) {
         setIsJobDropdownOpen(false);
+        setJobSearch(''); // Clear search on click outside
       }
     };
 
@@ -316,12 +337,15 @@ export default function AddQuote() {
       }
 
       if (jobsResult.status === 'fulfilled') {
-        setJobs(getOpenJobs(jobsResult.value.results));
+        const openJobs = getOpenJobs(jobsResult.value.results);
+        setJobs(openJobs);
+        setFilteredJobs(openJobs);
         setJobsPage(1);
         setJobsHasMore(Boolean(jobsResult.value.next));
       } else {
         console.error('Error fetching jobs:', jobsResult.reason);
         setJobs([]);
+        setFilteredJobs([]);
         setJobsHasMore(false);
       }
 
@@ -361,6 +385,29 @@ export default function AddQuote() {
       fetchQuoteFormData();
     }
   }, [session]);
+
+  // Debounced server-side job search
+  useEffect(() => {
+    if (!jobSearch.trim()) {
+      setFilteredJobs(jobs);
+      setIsSearchingJobs(false);
+      return;
+    }
+
+    setIsSearchingJobs(true);
+    const handler = setTimeout(async () => {
+      try {
+        const results = await searchJobsByTitle(jobSearch);
+        setFilteredJobs(getOpenJobs(results));
+      } catch (err) {
+        console.error('Error searching jobs:', err);
+      } finally {
+        setIsSearchingJobs(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [jobSearch, jobs]);
 
   const handleSelectCustomer = (customer: Customer) => {
     setCustomers((prev) => {
@@ -405,11 +452,43 @@ export default function AddQuote() {
   };
 
   const handleSelectJob = (job: Job) => {
+    setJobs((prev) => {
+      if (!prev.some((j) => j.id === job.id)) {
+        return [job, ...prev];
+      }
+      return prev;
+    });
     setValue('job_type', String(job.id), {
       shouldValidate: true,
       shouldDirty: true,
     });
+    setJobSearch('');
     setIsJobDropdownOpen(false);
+  };
+
+  const onModalJobSubmit: SubmitHandler<JobFormInput> = async (data) => {
+    if (!session?.accessToken) {
+      await showInfo('You must be logged in to create a job.');
+      return;
+    }
+    try {
+      const newJob = await createJob({
+        jobstatus: 'Open',
+        title: data.title,
+        site_address: data.site_address,
+        notes: data.notes || '',
+      });
+      setJobs((prev) => [newJob, ...prev]);
+      setFilteredJobs((prev) => [newJob, ...prev]);
+      setValue('job_type', String(newJob.id), { shouldValidate: true, shouldDirty: true });
+      resetModalJob();
+      setJobSearch('');
+      setIsCreateJobModalOpen(false);
+      await showSuccess('Job created successfully!');
+    } catch (error) {
+      console.error('Error creating job:', error);
+      await showError(formatApiError(error));
+    }
   };
 
   const loadMoreJobs = async () => {
@@ -656,13 +735,14 @@ export default function AddQuote() {
                 <button
                   type="button"
                   id="job_type_dropdown"
-                  disabled={jobsLoading || jobs.length === 0}
+                  disabled={jobsLoading}
                   onClick={() =>
                     setIsJobDropdownOpen((isOpen) => !isOpen)
                   }
                   onKeyDown={(event) => {
                     if (event.key === 'Escape') {
                       setIsJobDropdownOpen(false);
+                      setJobSearch('');
                     }
                   }}
                   aria-haspopup="listbox"
@@ -671,52 +751,102 @@ export default function AddQuote() {
                 >
                   {jobsLoading
                     ? 'Loading jobs...'
-                    : jobs.length === 0
-                      ? 'No jobs available'
-                      : selectedJob?.title || 'Select a job'}
+                    : selectedJob?.title || 'Select a job'}
                 </button>
                 <ChevronDown className="absolute right-4 top-1/2 w-4 h-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 {isJobDropdownOpen && (
                   <div
                     role="listbox"
                     aria-labelledby="job_type_dropdown"
-                    className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                    className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg flex flex-col"
                   >
-                    {jobs.map((job) => {
-                      const isSelected = selectedJobId === String(job.id);
+                    {/* Search bar */}
+                    <div className="p-2 border-b border-slate-100 bg-white z-10 sticky top-0">
+                      <input
+                        type="text"
+                        placeholder="Search job..."
+                        value={jobSearch}
+                        onChange={(e) => setJobSearch(e.target.value)}
+                        className="w-full bg-[#f4f6f8] border-0 rounded-md px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
 
-                      return (
+                    <div className="overflow-y-auto max-h-48">
+                      {isSearchingJobs ? (
+                        <div className="py-6 px-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4 text-cyan-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Searching...
+                        </div>
+                      ) : filteredJobs.length === 0 ? (
+                        <div className="py-6 px-4 text-center flex flex-col items-center justify-center">
+                          <div className="relative mb-3 flex items-center justify-center">
+                            <div className="absolute w-10 h-10 rounded-full bg-cyan-50 animate-ping opacity-75"></div>
+                            <div className="relative p-2.5 rounded-full bg-cyan-100 text-cyan-600">
+                              <Search className="w-5 h-5 animate-bounce" />
+                            </div>
+                          </div>
+                          <p className="text-xs font-semibold text-slate-700">No jobs found</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {jobSearch.trim() ? 'Try a different search term' : 'No open jobs available'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsJobDropdownOpen(false);
+                              setIsCreateJobModalOpen(true);
+                              setModalJobValue('title', jobSearch, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              });
+                            }}
+                            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#22d3ee] hover:bg-[#06b6d4] rounded-md transition-colors shadow-sm"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Create New Job
+                          </button>
+                        </div>
+                      ) : (
+                        filteredJobs.map((job) => {
+                          const isSelected = selectedJobId === String(job.id);
+                          return (
+                            <button
+                              key={job.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => handleSelectJob(job)}
+                              className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                                isSelected
+                                  ? 'bg-cyan-50 font-semibold text-cyan-700'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              {job.title}
+                            </button>
+                          );
+                        })
+                      )}
+                      {jobsHasMore && !jobSearch.trim() && (
                         <button
-                          key={job.id}
                           type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => handleSelectJob(job)}
-                          className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
-                            isSelected
-                              ? 'bg-cyan-50 font-semibold text-cyan-700'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
+                          onClick={loadMoreJobs}
+                          disabled={jobsLoadingMore}
+                          className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-xs font-bold text-cyan-600 hover:bg-cyan-50 hover:text-cyan-700 disabled:text-slate-400 disabled:hover:bg-white"
                         >
-                          {job.title}
+                          {jobsLoadingMore ? 'Loading more...' : 'Load more jobs'}
                         </button>
-                      );
-                    })}
-                    {jobsHasMore && (
-                      <button
-                        type="button"
-                        onClick={loadMoreJobs}
-                        disabled={jobsLoadingMore}
-                        className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-xs font-bold text-cyan-600 hover:bg-cyan-50 hover:text-cyan-700 disabled:text-slate-400 disabled:hover:bg-white"
-                      >
-                        {jobsLoadingMore ? 'Loading more...' : 'More'}
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
               {errors.job_type && <p className="mt-1 text-xs text-red-500">{errors.job_type.message}</p>}
             </div>
+
 
             {/* Quote Date */}
             <div>
@@ -1078,6 +1208,89 @@ export default function AddQuote() {
                   className="px-4 py-2 rounded-lg bg-[#22d3ee] hover:bg-[#06b6d4] text-white text-sm font-medium transition-colors disabled:bg-slate-300 shadow-sm"
                 >
                   {isModalCustomerSubmitting ? "Creating..." : "Create Customer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Create Job Modal */}
+      {isCreateJobModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">New Job</h3>
+                <p className="text-xs text-slate-500">Add a new job to your records</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateJobModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleModalJobSubmit(onModalJobSubmit)} className="p-6 space-y-5">
+              {/* Job Title */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-800 mb-1.5">Job Title *</label>
+                <input
+                  type="text"
+                  {...registerModalJob('title', { required: 'Job title is required' })}
+                  className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 placeholder:text-slate-400"
+                  placeholder="Kitchen Renovation"
+                />
+                {modalJobErrors.title && (
+                  <p className="mt-1 text-xs text-red-500">{modalJobErrors.title.message}</p>
+                )}
+              </div>
+
+              {/* Site Address */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-800 mb-1.5">Site Address *</label>
+                <input
+                  type="text"
+                  {...registerModalJob('site_address', { required: 'Site address is required' })}
+                  className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 placeholder:text-slate-400"
+                  placeholder="123 Work Street, London, UK"
+                />
+                {modalJobErrors.site_address && (
+                  <p className="mt-1 text-xs text-red-500">{modalJobErrors.site_address.message}</p>
+                )}
+              </div>
+
+              {/* Job Description */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-800 mb-1.5">Job Description (Optional)</label>
+                <textarea
+                  rows={3}
+                  {...registerModalJob('notes')}
+                  className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-inset focus:ring-cyan-400 resize-none placeholder:text-slate-400"
+                  placeholder="Information about this job..."
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateJobModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isModalJobSubmitting}
+                  className="px-4 py-2 rounded-lg bg-[#22d3ee] hover:bg-[#06b6d4] text-white text-sm font-medium transition-colors disabled:bg-slate-300 shadow-sm"
+                >
+                  {isModalJobSubmitting ? 'Creating...' : 'Create Job'}
                 </button>
               </div>
             </form>

@@ -66,3 +66,14 @@ export const updateJob = async (id: number | string, data: UpdateJobPayload): Pr
 export const deleteJob = async (id: number | string): Promise<void> => {
   await apiClient.delete(`/api/jobs/${id}/`);
 };
+
+export const searchJobsByTitle = async (title: string): Promise<Job[]> => {
+  const response = await apiClient.get<RawJobListResponse>('/api/jobs/list/', {
+    params: { title },
+  });
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  return response.data.results ?? [];
+};
+
