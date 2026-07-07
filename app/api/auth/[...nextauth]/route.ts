@@ -34,7 +34,7 @@ type LoginResponse = {
   };
 };
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   secret: AUTH_SECRET,
 
   providers: [

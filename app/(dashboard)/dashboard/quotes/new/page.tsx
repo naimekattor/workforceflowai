@@ -475,7 +475,7 @@ export default function AddQuote() {
       const newJob = await createJob({
         jobstatus: 'Open',
         title: data.title,
-        site_address: data.site_address,
+        // site_address: data.site_address,
         notes: data.notes || '',
       });
       setJobs((prev) => [newJob, ...prev]);
