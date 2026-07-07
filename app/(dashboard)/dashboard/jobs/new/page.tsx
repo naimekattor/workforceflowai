@@ -12,7 +12,7 @@ import { showError, showInfo, showSuccess } from "@/lib/ui/alerts";
 type JobInput = {
   jobstatus: JobStatus;
   title: string;
-  site_address: string;
+  // site_address: string;
   notes: string;
 };
 
@@ -61,7 +61,7 @@ export default function AddJob() {
   } = useForm<JobInput>({
     defaultValues: {
       jobstatus: "Open",
-      site_address: "",
+      // site_address: "",
       notes: "",
     },
   });
@@ -76,7 +76,7 @@ export default function AddJob() {
       await createJob({
         jobstatus: data.jobstatus,
         title: data.title,
-        site_address: data.site_address,
+        // site_address: data.site_address,
         notes: data.notes || "",
       });
 
@@ -126,7 +126,7 @@ export default function AddJob() {
             {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title.message}</p>}
           </div>
 
-          <div>
+          {/* <div>
             <label htmlFor="site_address" className="block text-[13px] font-bold text-slate-800 mb-1.5">
               Site Address *
             </label>
@@ -138,7 +138,7 @@ export default function AddJob() {
               className={inputClassName}
             />
             {errors.site_address && <p className="mt-1 text-xs text-red-500">{errors.site_address.message}</p>}
-          </div>
+          </div> */}
 
           <div>
             <label htmlFor="notes" className="block text-[13px] font-bold text-slate-800 mb-1.5">

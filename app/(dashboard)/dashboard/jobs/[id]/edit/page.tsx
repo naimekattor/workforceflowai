@@ -12,7 +12,7 @@ import { showError } from "@/lib/ui/alerts";
 type JobFormInput = {
   jobstatus: JobStatus;
   title: string;
-  site_address: string;
+  // site_address: string;
   notes: string;
 };
 
@@ -101,7 +101,7 @@ export default function EditJob() {
         reset({
           jobstatus: jobData.jobstatus || "Open",
           title: jobData.title || "",
-          site_address: jobData.site_address || "",
+          // site_address: jobData.site_address || "",
           notes: jobData.notes || "",
         });
       } catch (error) {
@@ -131,7 +131,7 @@ export default function EditJob() {
       await updateJob(id, {
         jobstatus: data.jobstatus,
         title: data.title,
-        site_address: data.site_address,
+        // site_address: data.site_address,
         notes: data.notes || "",
       });
 
@@ -208,7 +208,7 @@ export default function EditJob() {
               {errors.jobstatus && <p className="mt-1.5 text-xs text-red-500">{errors.jobstatus.message}</p>}
             </div>
 
-            <div>
+            {/* <div>
               <label htmlFor="site_address" className="block text-[13px] font-bold text-slate-800 mb-1.5">
                 Site Address *
               </label>
@@ -220,7 +220,7 @@ export default function EditJob() {
                 className={inputClassName}
               />
               {errors.site_address && <p className="mt-1.5 text-xs text-red-500">{errors.site_address.message}</p>}
-            </div>
+            </div> */}
 
             <div>
               <label htmlFor="notes" className="block text-[13px] font-bold text-slate-800 mb-1.5">

@@ -24,7 +24,7 @@ export interface JobListResponse {
 export interface CreateJobPayload {
   jobstatus: JobStatus;
   title: string;
-  site_address: string;
+  // site_address: string;
   notes: string;
   customer?: number;
 }
