@@ -40,10 +40,10 @@ export default function Customers() {
   const [nextCustomerPage, setNextCustomerPage] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (search = '') => {
     try {
       setLoading(true);
-      const data = await getCustomers(1);
+      const data = await getCustomers(1, search);
       setCustomers(data.results);
       setTotalCount(data.count);
       setNextCustomerPage(getNextCustomerPage(data.next));
@@ -57,9 +57,13 @@ export default function Customers() {
 
   useEffect(() => {
     if (session?.accessToken) {
-      fetchCustomers();
+      const delayDebounceFn = setTimeout(() => {
+        fetchCustomers(searchTerm);
+      }, 300);
+
+      return () => clearTimeout(delayDebounceFn);
     }
-  }, [session]);
+  }, [searchTerm, session]);
 
   const handleDelete = async (id: number) => {
     const confirmed = await confirmAction({
@@ -87,7 +91,7 @@ export default function Customers() {
 
     try {
       setLoadingMore(true);
-      const data = await getCustomers(nextCustomerPage);
+      const data = await getCustomers(nextCustomerPage, searchTerm);
       setCustomers((currentCustomers) =>
         mergeCustomers(currentCustomers, data.results)
       );
@@ -101,10 +105,7 @@ export default function Customers() {
     }
   };
 
-  const filteredCustomers = customers.filter(c => 
-    c.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.customer_email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers;
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">

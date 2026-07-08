@@ -465,15 +465,6 @@ export default function EditQuote() {
                 </div>
 
                 <div className="flex items-center justify-between mt-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={isTaxed}
-                      onChange={(e) => updateLineItem(index, 'vat_rate', e.target.checked ? String(quoteVatRate) : '0.00')}
-                      className="w-4 h-4 text-[#22d3ee] bg-[#f4f6f8] border-slate-300 rounded focus:ring-[#22d3ee]" 
-                    />
-                    <span className="text-[13px] font-bold text-slate-700">Taxable ({quoteVatRate}% VAT)</span>
-                  </label>
                   <div className="text-right">
                     <span className="text-[15px] font-bold text-slate-900">{formatCurrency(itemTotal)}</span>
                   </div>

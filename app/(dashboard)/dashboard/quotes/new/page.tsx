@@ -1015,16 +1015,9 @@ export default function AddQuote() {
               </div>
 
               <div className="flex items-center justify-between mt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    {...register(`items.${index}.is_taxable` as const)}
-                    className="w-4 h-4 text-[#22d3ee] bg-[#f4f6f8] border-slate-300 rounded focus:ring-[#22d3ee]" 
-                  />
-                  <span className="text-[13px] font-bold text-slate-700">
-                    Taxable ({vatRateLoading ? '...' : vatRate}% VAT)
-                  </span>
-                </label>
+                <div>
+                  
+                </div>
                 <div className="text-right">
                   <span className="text-[15px] font-bold text-slate-900">
                     {formatCurrency((watchItems[index]?.quantity || 0) * (watchItems[index]?.unit_price || 0))}

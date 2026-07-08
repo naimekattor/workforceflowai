@@ -85,6 +85,11 @@ export const sendQuoteEmail = async (quoteId: number): Promise<{ success: string
   return response.data;
 };
 
+export const sendFullPaymentLink = async (quoteId: number): Promise<{ success: string }> => {
+  const response = await apiClient.post<{ success: string }>(`/api/dashboard/get-full-payment/${quoteId}/`);
+  return response.data;
+};
+
 export const getStripeCheckoutUrl = async (quoteId: number): Promise<{ checkout_url: string }> => {
   const response = await apiClient.post<{ checkout_url: string }>("/api/quote/checkout/", { quote_id: quoteId });
   return response.data;

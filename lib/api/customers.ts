@@ -20,8 +20,13 @@ export interface CustomerListResponse {
   results: Customer[];
 }
 
-export const getCustomers = async (page = 1): Promise<CustomerListResponse> => {
-  const response = await apiClient.get<CustomerListResponse>(`/api/customer/list/?page=${page}`);
+export const getCustomers = async (page = 1, search = ""): Promise<CustomerListResponse> => {
+  const response = await apiClient.get<CustomerListResponse>("/api/customer/list/", {
+    params: {
+      page,
+      ...(search ? { search, name: search } : {}),
+    },
+  });
   return response.data;
 };
 

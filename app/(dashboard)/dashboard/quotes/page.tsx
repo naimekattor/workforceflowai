@@ -5,7 +5,7 @@ import { Plus, Search, Eye, Edit, Trash2, Send, X } from 'lucide-react';
 import Link from 'next/link';
 import { isAxiosError } from 'axios';
 import { formatCurrency } from '@/lib/invoices';
-import { getQuotes, deleteQuote, sendQuoteEmail, Quote } from '@/lib/api/quotes';
+import { getQuotes, deleteQuote, sendQuoteEmail, sendFullPaymentLink, Quote } from '@/lib/api/quotes';
 import { getCustomers, Customer } from '@/lib/api/customers';
 import { useSession } from 'next-auth/react';
 import { confirmAction, showError, showSuccess } from '@/lib/ui/alerts';
@@ -107,13 +107,21 @@ export default function Quotes() {
 
     try {
       setIsSending(true);
-      await sendQuoteEmail(selectedQuoteId);
-      await showSuccess('Quote sent successfully to customer!');
-      
-      // Update status in local state
-      setQuotes(quotes.map(q => 
-        q.id === selectedQuoteId ? { ...q, quote_status: 'Sent' } : q
-      ));
+      const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
+      const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid';
+
+      if (isPartialPaid) {
+        await sendFullPaymentLink(selectedQuoteId);
+        await showSuccess('Full payment link sent successfully to customer!');
+      } else {
+        await sendQuoteEmail(selectedQuoteId);
+        await showSuccess('Quote sent successfully to customer!');
+        
+        // Update status in local state
+        setQuotes(quotes.map(q => 
+          q.id === selectedQuoteId ? { ...q, quote_status: 'Sent' } : q
+        ));
+      }
       
       closeSendModal();
     } catch (error) {
@@ -154,6 +162,9 @@ export default function Quotes() {
     String(q.id).includes(searchTerm) || 
     getQuoteCustomerName(q).toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
+  const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid';
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">
@@ -224,10 +235,12 @@ export default function Quotes() {
                     <td className="px-6 py-4 text-[13px] font-bold text-slate-900">{formatCurrency(parseFloat(quote.price || '0'))}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                        quote.quote_status === 'Accepted' 
+                        quote.quote_status?.toLowerCase() === 'accepted' 
                           ? 'bg-emerald-100 text-emerald-700' 
-                          : quote.quote_status === 'Sent'
+                          : quote.quote_status?.toLowerCase() === 'sent'
                           ? 'bg-blue-100 text-blue-700'
+                          : quote.quote_status?.toLowerCase() === 'partial paid'
+                          ? 'bg-amber-100 text-amber-700'
                           : 'bg-slate-100 text-slate-700'
                       }`}>
                         {quote.quote_status}
@@ -299,8 +312,14 @@ export default function Quotes() {
           <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div>
-                <h2 className="text-base font-bold text-slate-900">Send Quote</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Send this quote to the customer&apos;s email</p>
+                <h2 className="text-base font-bold text-slate-900">
+                  {isPartialPaid ? 'Send Full Payment Link' : 'Send Quote'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {isPartialPaid 
+                    ? 'Send the remaining balance payment link to the customer'
+                    : 'Send this quote to the customer\'s email'}
+                </p>
               </div>
               <button
                 type="button"
@@ -313,7 +332,11 @@ export default function Quotes() {
             </div>
 
             <div className="p-5">
-               <p className="text-sm text-slate-600">Are you sure you want to send this quote via email to the customer?</p>
+               <p className="text-sm text-slate-600">
+                 {isPartialPaid 
+                   ? 'Are you sure you want to send the rest amount payment link to the customer?' 
+                   : 'Are you sure you want to send this quote via email to the customer?'}
+               </p>
             </div>
 
             <div className="px-5 py-4 border-t border-slate-100 flex justify-end gap-2">
@@ -333,7 +356,7 @@ export default function Quotes() {
                 {isSending ? 'Sending...' : (
                   <>
                     <Send className="w-4 h-4" />
-                    Send Quote
+                    {isPartialPaid ? 'Send Link' : 'Send Quote'}
                   </>
                 )}
               </button>
