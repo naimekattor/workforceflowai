@@ -84,7 +84,7 @@ export default function QuoteDecisionButtons({
   const isDisabled =
     Boolean(pendingDecision) ||
     Boolean(completedDecision) ||
-    normalizedQuoteStatus !== "sent";
+    !(normalizedQuoteStatus === "sent" || normalizedQuoteStatus === "draft");
 
   return (
     <div className="space-y-2">
