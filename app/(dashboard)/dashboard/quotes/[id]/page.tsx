@@ -282,8 +282,24 @@ export default function QuoteDetails() {
                 return quote.payment_note || 'No payment terms added.';
               }
               if (quote.payment_style === 'Split') {
-                const percentage = quote.split_percentage ? `${parseFloat(quote.split_percentage.toString())}%` : '';
-                return `Split ${percentage ? `(${percentage})` : ''}`.trim();
+                const percentage = quote.split_percentage ? parseFloat(quote.split_percentage.toString()) : 0;
+                const totalVal = parseFloat(quote.total_price || quote.price || '0');
+                const parsedTotal = isNaN(totalVal) ? 0 : totalVal;
+                
+                if (percentage > 0 && percentage < 100) {
+                  const advanceAmt = parsedTotal * (percentage / 100);
+                  const remainingAmt = parsedTotal * ((100 - percentage) / 100);
+                  return (
+                    <div>
+                      <div>Split ({percentage}%)</div>
+                      <div className="mt-2 space-y-1 text-xs text-slate-500">
+                        <div>Advance Payment ({percentage}%): <span className="font-bold text-slate-700">{formatCurrency(advanceAmt)}</span></div>
+                        <div>Remaining Balance ({100 - percentage}%): <span className="font-bold text-slate-700">{formatCurrency(remainingAmt)}</span></div>
+                      </div>
+                    </div>
+                  );
+                }
+                return `Split (${percentage}%)`;
               }
               if (quote.payment_style === 'On_Completion') {
                 return 'On Completion';

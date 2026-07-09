@@ -138,13 +138,28 @@ export default async function PublicQuotePage({
   const totalAmount = parseAmount(quote.total_price || quote.price);
   const paymentStatus = getSearchParamValue(status);
 
-  let paymentStyleLabel = "Not provided";
+  let paymentStyleLabel: React.ReactNode = "Not provided";
   if (quote.payment_style === "On_Completion") {
     paymentStyleLabel = "On Completion";
   } else if (quote.payment_style === "Advance") {
     paymentStyleLabel = "Advance";
   } else if (quote.payment_style === "Split") {
-    paymentStyleLabel = `Split (${quote.split_percentage ? `${quote.split_percentage}%` : "-"})`;
+    const percentage = quote.split_percentage ? parseFloat(quote.split_percentage.toString()) : 0;
+    if (percentage > 0 && percentage < 100) {
+      const advanceAmount = totalAmount * (percentage / 100);
+      const remainingAmount = totalAmount * ((100 - percentage) / 100);
+      paymentStyleLabel = (
+        <div>
+          <div>Split ({percentage}%)</div>
+          <div className="mt-2 space-y-1 text-xs text-slate-500">
+            <div>Advance Payment ({percentage}%): <span className="font-bold text-slate-700">{formatCurrency(advanceAmount)}</span></div>
+            <div>Remaining Balance ({100 - percentage}%): <span className="font-bold text-slate-700">{formatCurrency(remainingAmount)}</span></div>
+          </div>
+        </div>
+      );
+    } else {
+      paymentStyleLabel = `Split (${percentage}%)`;
+    }
   }
 
   return (

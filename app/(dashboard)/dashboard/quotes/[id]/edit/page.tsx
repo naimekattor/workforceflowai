@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { formatCurrency } from '../../../../../../lib/invoices';
 import { getQuote, updateQuote, Quote } from '@/lib/api/quotes';
-import { getCustomers, Customer } from '@/lib/api/customers';
-import { getJobs, Job } from '@/lib/api/jobs';
+import { getCustomers, Customer, getCustomer, searchCustomersByName } from '@/lib/api/customers';
+import { getJobs, Job, getJob } from '@/lib/api/jobs';
 import { showSuccess, showError } from '@/lib/ui/alerts';
 
 interface ExtendedLineItem {
@@ -40,6 +40,9 @@ export default function EditQuote() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [paymentStyle, setPaymentStyle] = useState<'Advance' | 'Split' | 'On_Completion'>('On_Completion');
+  const [splitPercentage, setSplitPercentage] = useState<number | ''>('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | ''>('');
+  const [selectedJobId, setSelectedJobId] = useState<number | ''>('');
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -64,8 +67,81 @@ export default function EditQuote() {
         if (isMounted) {
           const extendedQuote = quoteData as ExtendedQuote;
           setQuote(extendedQuote);
-          setCustomers(customersData.results || []);
-          setJobs(jobsData.results || []);
+          
+          let customerList = customersData.results || [];
+          let jobList = jobsData.results || [];
+
+          // 1. Try to find customer in the initial list by name/email
+          let foundCustomer = customerList.find(c => c.customer_name === extendedQuote.customer_name || c.customer_email === extendedQuote.customer_email);
+          let custId = foundCustomer?.id || extendedQuote.customer || extendedQuote.customer_id;
+
+          // 2. If not found in the initial page, search by name
+          if (!custId && extendedQuote.customer_name) {
+            try {
+              const searchResults = await searchCustomersByName(extendedQuote.customer_name);
+              const match = searchResults.find(c => c.customer_name === extendedQuote.customer_name);
+              if (match) {
+                custId = match.id;
+                if (!customerList.some(c => c.id === custId)) {
+                  customerList = [match, ...customerList];
+                }
+              }
+            } catch (err) {
+              console.error("Error searching customer by name:", err);
+            }
+          }
+
+          // 3. Resolve the job of this quote
+          const jobId = extendedQuote.job_details?.id ?? (typeof extendedQuote.job_details === 'number' ? extendedQuote.job_details : undefined) ?? jobList.find(j => j.title === extendedQuote.job_title || j.title === extendedQuote.job_type)?.id;
+          
+          // 4. If still no custId, and we have a jobId, try fetching the job to resolve the customer
+          if (!custId && jobId) {
+            try {
+              const fullJob = await getJob(jobId);
+              if (fullJob.customer) {
+                custId = fullJob.customer;
+                const hasCust = customerList.some(c => c.id === custId);
+                if (!hasCust) {
+                  const specificCustomer = await getCustomer(custId);
+                  customerList = [specificCustomer, ...customerList];
+                }
+              }
+            } catch (jobErr) {
+              console.error("Error resolving customer from job:", jobErr);
+            }
+          }
+
+          // 5. If custId is resolved but still not in customerList, fetch that customer directly
+          if (custId) {
+            const hasCust = customerList.some(c => c.id === custId);
+            if (!hasCust) {
+              try {
+                const specificCustomer = await getCustomer(custId);
+                customerList = [specificCustomer, ...customerList];
+              } catch (custErr) {
+                console.error("Error fetching specific customer by ID:", custErr);
+              }
+            }
+          }
+
+          // 6. Ensure job is in jobList
+          if (jobId) {
+            const hasJob = jobList.some(j => j.id === jobId);
+            if (!hasJob) {
+              try {
+                const specificJob = await getJob(jobId);
+                jobList = [specificJob, ...jobList];
+              } catch (jobErr) {
+                console.error("Error fetching specific job:", jobErr);
+              }
+            }
+          }
+
+          setCustomers(customerList);
+          setJobs(jobList);
+          setSelectedCustomerId(custId || '');
+          setSelectedJobId(jobId || '');
+
           const rawStyle = extendedQuote.payment_style;
           let normalizedStyle: 'Advance' | 'Split' | 'On_Completion' = 'On_Completion';
           if (rawStyle) {
@@ -77,6 +153,7 @@ export default function EditQuote() {
             }
           }
           setPaymentStyle(normalizedStyle);
+          setSplitPercentage(extendedQuote.split_percentage !== null && extendedQuote.split_percentage !== undefined ? parseFloat(extendedQuote.split_percentage.toString()) : '');
           
           const quoteVat = extendedQuote.vat_rate || "15.00";
           const items = extendedQuote.line_items || [];
@@ -227,9 +304,6 @@ export default function EditQuote() {
 
   const computedTotal = computedSubtotal + computedVat;
 
-  const selectedCustomerId = quote.customer ?? quote.customer_id ?? customers.find(c => c.customer_name === quote.customer_name)?.id;
-  const selectedJobId = quote.job_details?.id ?? (typeof quote.job_details === 'number' ? quote.job_details : undefined) ?? jobs.find(j => j.title === quote.job_title || j.title === quote.job_type)?.id;
-
   return (
     <div className="max-w-5xl mx-auto pb-12">
       {/* Header */}
@@ -258,7 +332,8 @@ export default function EditQuote() {
               <select
                 id="customer"
                 name="customer"
-                defaultValue={selectedCustomerId || ""}
+                value={selectedCustomerId}
+                onChange={(e) => setSelectedCustomerId(e.target.value ? parseInt(e.target.value) : '')}
                 className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-500 focus:ring-2 focus:ring-inset focus:ring-cyan-400 appearance-none"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
               >
@@ -279,7 +354,8 @@ export default function EditQuote() {
               <select
                 id="job"
                 name="job"
-                defaultValue={selectedJobId || ""}
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value ? parseInt(e.target.value) : '')}
                 className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-500 focus:ring-2 focus:ring-inset focus:ring-cyan-400 appearance-none"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
               >
@@ -356,11 +432,36 @@ export default function EditQuote() {
                     step="0.01"
                     min="0"
                     max="100"
-                    defaultValue={quote.split_percentage || ""}
+                    value={splitPercentage}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSplitPercentage(val === '' ? '' : parseFloat(val));
+                    }}
                     required
                     placeholder="e.g. 30"
                     className="w-full bg-[#f4f6f8] border-0 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400"
                   />
+                  {(() => {
+                    const pct = splitPercentage !== '' ? parseFloat(splitPercentage.toString()) : 0;
+                    if (!isNaN(pct) && pct > 0 && pct < 100) {
+                      const advanceAmt = computedTotal * (pct / 100);
+                      const remainingAmt = computedTotal * ((100 - pct) / 100);
+                      return (
+                        <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-2">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Split Payment Breakdown</div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-slate-600 font-medium">Advance Payment ({pct}%):</span>
+                            <span className="text-slate-900 font-bold">{formatCurrency(advanceAmt)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200/60">
+                            <span className="text-slate-600 font-medium">Remaining Balance ({100 - pct}%):</span>
+                            <span className="text-slate-900 font-bold">{formatCurrency(remainingAmt)}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
             </div>
@@ -464,11 +565,11 @@ export default function EditQuote() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-2">
+                {/* <div className="flex items-center justify-between mt-2">
                   <div className="text-right">
                     <span className="text-[15px] font-bold text-slate-900">{formatCurrency(itemTotal)}</span>
                   </div>
-                </div>
+                </div> */}
               </div>
             );
           })}

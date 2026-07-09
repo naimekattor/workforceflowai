@@ -56,7 +56,7 @@ export const createQuote = async (data: Partial<Quote>): Promise<Quote> => {
 };
 
 export const getQuote = async (id: number | string): Promise<Quote> => {
-  const response = await apiClient.get<Quote>(`/api/quote/${id}/`);
+  const response = await apiClient.get<Quote>(`/api/quote/details/${id}/`);
   return response.data;
 };
 

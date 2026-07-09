@@ -201,6 +201,7 @@ export default function AddQuote() {
   const selectedJobId = watch('job_type');
   const selectedJob = jobs.find((job) => job.id === Number(selectedJobId));
   const watchPaymentStyle = watch("payment_style");
+  const watchSplitPercentage = watch("split_percentage");
 
   const watchQuoteDate = watch("quote_date");
 
@@ -934,6 +935,27 @@ export default function AddQuote() {
                   {errors.split_percentage && (
                     <p className="mt-1 text-xs text-red-500">{errors.split_percentage.message}</p>
                   )}
+                  {(() => {
+                    const pct = watchSplitPercentage ? parseFloat(watchSplitPercentage) : 0;
+                    if (!isNaN(pct) && pct > 0 && pct < 100) {
+                      const advanceAmt = total * (pct / 100);
+                      const remainingAmt = total * ((100 - pct) / 100);
+                      return (
+                        <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-2">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Split Payment Breakdown</div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-slate-600 font-medium">Advance Payment ({pct}%):</span>
+                            <span className="text-slate-900 font-bold">{formatCurrency(advanceAmt)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200/60">
+                            <span className="text-slate-600 font-medium">Remaining Balance ({100 - pct}%):</span>
+                            <span className="text-slate-900 font-bold">{formatCurrency(remainingAmt)}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
             </div>
@@ -1014,7 +1036,7 @@ export default function AddQuote() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-2">
+              {/* <div className="flex items-center justify-between mt-2">
                 <div>
                   
                 </div>
@@ -1023,7 +1045,7 @@ export default function AddQuote() {
                     {formatCurrency((watchItems[index]?.quantity || 0) * (watchItems[index]?.unit_price || 0))}
                   </span>
                 </div>
-              </div>
+              </div> */}
             </div>
           ))}
 
