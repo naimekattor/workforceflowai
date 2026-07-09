@@ -53,15 +53,18 @@ export default function QuoteDecisionButtons({
     }
   };
 
-  const normalizedQuoteStatus = quoteStatus?.trim().toLowerCase();
+  const normalizedQuoteStatus = quoteStatus?.trim().toLowerCase().replace(/_/g, ' ');
 
   if (
     normalizedQuoteStatus === "accepted" ||
     normalizedQuoteStatus === "rejected" ||
-    normalizedQuoteStatus === "paid"
+    normalizedQuoteStatus === "paid" ||
+    normalizedQuoteStatus === "partial paid"
   ) {
     const isPositiveStatus =
-      normalizedQuoteStatus === "accepted" || normalizedQuoteStatus === "paid";
+      normalizedQuoteStatus === "accepted" ||
+      normalizedQuoteStatus === "paid" ||
+      normalizedQuoteStatus === "partial paid";
 
     return (
       <div
@@ -76,7 +79,7 @@ export default function QuoteDecisionButtons({
         ) : (
           <XCircle className="h-4 w-4" />
         )}
-        {quoteStatus}
+        {normalizedQuoteStatus === "partial paid" ? "Partially Paid" : quoteStatus}
       </div>
     );
   }

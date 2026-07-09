@@ -108,7 +108,7 @@ export default function Quotes() {
     try {
       setIsSending(true);
       const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
-      const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid';
+      const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid' || selectedQuote?.quote_status?.toLowerCase() === 'partial_paid';
 
       if (isPartialPaid) {
         await sendFullPaymentLink(selectedQuoteId);
@@ -164,7 +164,7 @@ export default function Quotes() {
   );
 
   const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
-  const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid';
+  const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid' || selectedQuote?.quote_status?.toLowerCase() === 'partial_paid';
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">
@@ -239,7 +239,7 @@ export default function Quotes() {
                           ? 'bg-emerald-100 text-emerald-700' 
                           : quote.quote_status?.toLowerCase() === 'sent'
                           ? 'bg-blue-100 text-blue-700'
-                          : quote.quote_status?.toLowerCase() === 'partial paid'
+                          : (quote.quote_status?.toLowerCase() === 'partial paid' || quote.quote_status?.toLowerCase() === 'partial_paid')
                           ? 'bg-amber-100 text-amber-700'
                           : 'bg-slate-100 text-slate-700'
                       }`}>
