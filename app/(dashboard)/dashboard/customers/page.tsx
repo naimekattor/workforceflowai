@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 import { getCustomers, deleteCustomer, Customer } from '@/lib/api/customers';
 import { useSession } from 'next-auth/react';
@@ -40,10 +40,25 @@ export default function Customers() {
   const [nextCustomerPage, setNextCustomerPage] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchCustomers = async (search = '') => {
+  // Sorting states
+  const [sortKey, setSortKey] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const fetchCustomers = async (
+    search = '',
+    key = sortKey,
+    order = sortOrder
+  ) => {
     try {
       setLoading(true);
-      const data = await getCustomers(1, search);
+      const ordering = `${order === 'desc' ? '-' : ''}${key}`;
+      const isPhone = /^[+\d\s\-()]+$/.test(search.trim()) && search.trim().replace(/[^\d]/g, '').length >= 3;
+      const data = await getCustomers(
+        1,
+        isPhone ? "" : search,
+        ordering,
+        isPhone ? { phone_number: search } : undefined
+      );
       setCustomers(data.results);
       setTotalCount(data.count);
       setNextCustomerPage(getNextCustomerPage(data.next));
@@ -58,12 +73,12 @@ export default function Customers() {
   useEffect(() => {
     if (session?.accessToken) {
       const delayDebounceFn = setTimeout(() => {
-        fetchCustomers(searchTerm);
+        fetchCustomers(searchTerm, sortKey, sortOrder);
       }, 300);
 
       return () => clearTimeout(delayDebounceFn);
     }
-  }, [searchTerm, session]);
+  }, [searchTerm, sortKey, sortOrder, session]);
 
   const handleDelete = async (id: number) => {
     const confirmed = await confirmAction({
@@ -91,7 +106,14 @@ export default function Customers() {
 
     try {
       setLoadingMore(true);
-      const data = await getCustomers(nextCustomerPage, searchTerm);
+      const ordering = `${sortOrder === 'desc' ? '-' : ''}${sortKey}`;
+      const isPhone = /^[+\d\s\-()]+$/.test(searchTerm.trim()) && searchTerm.trim().replace(/[^\d]/g, '').length >= 3;
+      const data = await getCustomers(
+        nextCustomerPage,
+        isPhone ? "" : searchTerm,
+        ordering,
+        isPhone ? { phone_number: searchTerm } : undefined
+      );
       setCustomers((currentCustomers) =>
         mergeCustomers(currentCustomers, data.results)
       );
@@ -103,6 +125,42 @@ export default function Customers() {
     } finally {
       setLoadingMore(false);
     }
+  };
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortHeader = (label: string, key: string) => {
+    const isSorted = sortKey === key;
+    return (
+      <th
+        onClick={() => handleSort(key)}
+        className="px-6 py-4 text-sm font-bold text-slate-900 cursor-pointer hover:bg-slate-50/80 select-none group transition-colors"
+      >
+        <div className="flex items-center gap-1.5 font-bold">
+          {label}
+          <span className="flex-shrink-0 text-slate-400 group-hover:text-slate-600 transition-colors">
+            {isSorted ? (
+              sortOrder === 'asc' ? (
+                <ArrowUp className="w-3.5 h-3.5 text-[#22d3ee]" />
+              ) : (
+                <ArrowDown className="w-3.5 h-3.5 text-[#22d3ee]" />
+              )
+            ) : (
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <ArrowUp className="w-3.5 h-3.5 text-slate-300" />
+              </span>
+            )}
+          </span>
+        </div>
+      </th>
+    );
   };
 
   const filteredCustomers = customers;
@@ -127,17 +185,28 @@ export default function Customers() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-w-0 max-w-full">
         {/* Search Bar */}
         <div className="p-4 border-b border-slate-100">
-          <div className="relative max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border-0 bg-slate-50 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400 transition-all"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search customers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border-0 bg-slate-50 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-cyan-400 transition-all"
-            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-all"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         </div>
 
@@ -146,11 +215,11 @@ export default function Customers() {
           <table className="w-full min-w-[760px] whitespace-nowrap text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="px-6 py-4 text-sm font-bold text-slate-900">Customer Name</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-900">Email</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-900">Phone</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-900">Type</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-900">Date Created</th>
+                {renderSortHeader('Customer Name', 'customer_name')}
+                {renderSortHeader('Email', 'customer_email')}
+                {renderSortHeader('Phone', 'phone_number')}
+                {renderSortHeader('Type', 'customer_type')}
+                {renderSortHeader('Date Created', 'created_at')}
                 <th className="px-6 py-4 text-sm font-bold text-slate-900 text-center">Actions</th>
               </tr>
             </thead>

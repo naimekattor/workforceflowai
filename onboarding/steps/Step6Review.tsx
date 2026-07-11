@@ -123,7 +123,7 @@ export default function Step6Review() {
         { label: 'Directors', value: data.lc_directors.filter(Boolean).join(', ') },
         { label: 'Email', value: data.lc_email },
         { label: 'Phone', value: data.lc_phone },
-        { label: 'Corp Tax UTR', value: data.lc_corpTaxUtr },
+        { label: 'Corp Tax UTR', value: data.lc_corpTaxUtr || 'N/A' },
       ]
     : bt === 'partnership'
     ? [
@@ -140,7 +140,7 @@ export default function Step6Review() {
         { label: 'Members', value: data.llp_members.filter(Boolean).join(', ') },
         { label: 'Email', value: data.llp_email },
         { label: 'Phone', value: data.llp_phone },
-        { label: 'Corp Tax UTR', value: data.llp_corpTaxUtr },
+        { label: 'Corp Tax UTR', value: data.llp_corpTaxUtr || 'N/A' },
       ];
 
   return (
@@ -359,7 +359,7 @@ function validateOnboardingData(data: OnboardingData): ValidationIssue[] {
       businessRoute
     );
     addIssue(issues, !clean(data.llp_phone), 'LLP phone number', businessRoute);
-    addIssue(issues, !clean(data.llp_corpTaxUtr), 'Corporation Tax UTR', businessRoute);
+    // addIssue(issues, !clean(data.llp_corpTaxUtr), 'Corporation Tax UTR', businessRoute);
   }
 
   const taxRoute = getStep3Route(data.businessType);

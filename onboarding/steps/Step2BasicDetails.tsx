@@ -393,10 +393,7 @@ export function Step2LLP() {
       return;
     }
 
-    if (!clean(data.llp_corpTaxUtr)) {
-      setError('Corporation Tax UTR is required.');
-      return;
-    }
+
 
     router.push(getStep3Route(data.businessType));
   }
@@ -451,7 +448,7 @@ export function Step2LLP() {
               onChange={e => update('llp_phone', e.target.value)}
             />
             <Field
-              label="Corporation Tax UTR" required
+              label="Corporation Tax UTR"
               placeholder="10-digit number"
               value={data.llp_corpTaxUtr}
               onChange={e => update('llp_corpTaxUtr', e.target.value)}

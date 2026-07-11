@@ -20,11 +20,22 @@ export interface CustomerListResponse {
   results: Customer[];
 }
 
-export const getCustomers = async (page = 1, search = ""): Promise<CustomerListResponse> => {
+export const getCustomers = async (
+  page = 1,
+  search = "",
+  ordering = "-created_at",
+  filters?: { name?: string; email?: string; phone?: string; phone_number?: string }
+): Promise<CustomerListResponse> => {
+  const isSearching = Boolean(search) || Boolean(filters?.name) || Boolean(filters?.email) || Boolean(filters?.phone) || Boolean(filters?.phone_number);
   const response = await apiClient.get<CustomerListResponse>("/api/customer/list/", {
     params: {
-      page,
-      ...(search ? { search, name: search } : {}),
+      ...(isSearching ? {} : { page }),
+      ...(isSearching ? {} : { ordering }),
+      ...(search ? { search } : {}),
+      ...(filters?.name ? { name: filters.name } : {}),
+      ...(filters?.email ? { email: filters.email } : {}),
+      ...(filters?.phone ? { phone: filters.phone } : {}),
+      ...(filters?.phone_number ? { phone_number: filters.phone_number } : {}),
     },
   });
   return response.data;
