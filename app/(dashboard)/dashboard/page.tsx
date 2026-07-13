@@ -215,7 +215,7 @@ export default function Dashboard() {
                 return (
                 <div key={quote.id} className="flex items-center justify-between p-4 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
                   <div>
-                    <p className="text-sm font-bold text-slate-900">Q-{quote.quote_uuid.slice(0, 4)}</p>
+                    <p className="text-sm font-bold text-slate-900">{quote.quote_number}</p>
                     {customerName && <p className="text-xs text-slate-500 mt-0.5">{customerName}</p>}
                   </div>
                   <div className="text-right">
@@ -281,7 +281,7 @@ export default function Dashboard() {
             {recentQuotes.length === 0 && recentInvoices.length === 0 ? (
               <p className="text-sm text-slate-500 text-center py-4">No recent activity</p>
             ) : (
-              [...recentQuotes.map(q => ({ title: "Quote created", desc: `Quote Q-${q.quote_uuid.slice(0, 4)} created`, meta: `Created at ${new Date(q.created_at).toLocaleString()}` })),
+              [...recentQuotes.map(q => ({ title: "Quote created", desc: `Quote ${q.quote_number} created`, meta: `Created at ${new Date(q.created_at).toLocaleString()}` })),
                ...recentInvoices.map(i => ({ title: "Invoice generated", desc: `Invoice ${i.invoice_number} created`, meta: `Created at ${new Date(i.created_at).toLocaleString()}` }))]
                 .sort((a, b) => b.meta.localeCompare(a.meta))
                 .slice(0, 8)

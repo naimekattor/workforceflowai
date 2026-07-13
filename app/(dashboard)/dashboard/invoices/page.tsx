@@ -122,7 +122,7 @@ export default function Invoices() {
     return invoices.filter((invoice) => {
       const searchableValues = [
         invoice.invoice_number,
-        invoice.quote_uuid,
+        invoice.quote_number,
         invoice.quote_status,
         getCustomerLabel(invoice, customerNameById),
         invoice.total_price,
@@ -213,8 +213,8 @@ export default function Invoices() {
                       {getCustomerLabel(invoice, customerNameById)}
                     </td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">
-                      <span className="inline-block max-w-[220px] truncate align-bottom" title={invoice.quote_uuid}>
-                        {invoice.quote_uuid}
+                      <span className="inline-block max-w-[220px] truncate align-bottom" title={invoice.quote_number}>
+                        {invoice.quote_number}
                       </span>
                     </td>
                     <td className="px-6 py-4">

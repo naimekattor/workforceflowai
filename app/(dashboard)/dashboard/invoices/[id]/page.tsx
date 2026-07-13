@@ -267,7 +267,7 @@ export default function InvoiceDetails() {
             </p>
             <p>
               <span className="font-semibold">Reference:</span>{" "}
-              {invoice.quote_uuid}
+              {invoice.quote_number}
             </p>
           </div>
         </div>
@@ -318,8 +318,8 @@ export default function InvoiceDetails() {
 
         <div className="text-xs text-slate-600">
           <p>
-            <span className="font-semibold">Quote UUID:</span>{" "}
-            {invoice.quote_uuid}
+            <span className="font-semibold">Quote ID:</span>{" "}
+            {invoice.quote_number}
           </p>
           <p className="mt-1">
             <span className="font-semibold">Created:</span>{" "}

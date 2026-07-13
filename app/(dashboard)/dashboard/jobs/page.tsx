@@ -239,7 +239,6 @@ export default function Jobs() {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Job Title</th>
-                <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Site Address</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Status</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Date Created</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900 text-center">Actions</th>
@@ -266,7 +265,6 @@ export default function Jobs() {
                         {job.title}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-[13px] text-slate-700">{job.site_address || "-"}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(job.jobstatus)}`}>
                         {job.jobstatus}

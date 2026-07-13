@@ -181,13 +181,7 @@ export default function JobDetails() {
           <h2 className="text-lg font-bold text-slate-900 mb-6">Job Information</h2>
           <div className="space-y-5">
             
-            <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 mt-0.5 text-slate-400" />
-              <div>
-                <p className="text-[13px] text-slate-500 mb-1">Site Address</p>
-                <p className="text-[14px] font-medium text-slate-900">{job.site_address || "Not provided"}</p>
-              </div>
-            </div>
+            
             <div className="flex items-start gap-3">
               <Calendar className="w-4 h-4 mt-0.5 text-slate-400" />
               <div>
