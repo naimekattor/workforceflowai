@@ -122,9 +122,10 @@ export default function Quotes() {
     try {
       setIsSending(true);
       const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
-      const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid' || selectedQuote?.quote_status?.toLowerCase() === 'partial_paid';
+      const status = selectedQuote?.quote_status?.toLowerCase();
+      const shouldSendPaymentLink = status === 'partial paid' || status === 'partial_paid' || status === 'accepted';
 
-      if (isPartialPaid) {
+      if (shouldSendPaymentLink) {
         await sendFullPaymentLink(selectedQuoteId);
         await showSuccess('Full payment link sent successfully to customer!');
       } else {
@@ -175,7 +176,8 @@ export default function Quotes() {
   const filteredQuotes = quotes;
 
   const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
-  const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid' || selectedQuote?.quote_status?.toLowerCase() === 'partial_paid';
+  const selectedStatus = selectedQuote?.quote_status?.toLowerCase();
+  const shouldSendPaymentLink = selectedStatus === 'partial paid' || selectedStatus === 'partial_paid' || selectedStatus === 'accepted';
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto">
@@ -324,10 +326,10 @@ export default function Quotes() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {isPartialPaid ? 'Send Full Payment Link' : 'Send Quote'}
+                  {shouldSendPaymentLink ? 'Send Full Payment Link' : 'Send Quote'}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {isPartialPaid 
+                  {shouldSendPaymentLink 
                     ? 'Send the remaining balance payment link to the customer'
                     : 'Send this quote to the customer\'s email'}
                 </p>
@@ -344,7 +346,7 @@ export default function Quotes() {
 
             <div className="p-5">
                <p className="text-sm text-slate-600">
-                 {isPartialPaid 
+                 {shouldSendPaymentLink 
                    ? 'Are you sure you want to send the rest amount payment link to the customer?' 
                    : 'Are you sure you want to send this quote via email to the customer?'}
                </p>
@@ -367,7 +369,7 @@ export default function Quotes() {
                 {isSending ? 'Sending...' : (
                   <>
                     <Send className="w-4 h-4" />
-                    {isPartialPaid ? 'Send Link' : 'Send Quote'}
+                    {shouldSendPaymentLink ? 'Send Link' : 'Send Quote'}
                   </>
                 )}
               </button>

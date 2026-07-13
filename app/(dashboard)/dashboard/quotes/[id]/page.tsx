@@ -206,7 +206,7 @@ export default function QuoteDetails() {
           </Link>
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold text-slate-900">{quote.invoice_number}</h1>
+              <h1 className="text-3xl font-bold text-slate-900">{quote.quote_number}</h1>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getStatusClassName(quote.quote_status)}`}>
                 {quote.quote_status}
               </span>
@@ -242,7 +242,7 @@ export default function QuoteDetails() {
             <h2 className="text-lg font-bold text-slate-900">Quote Information</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <DetailRow label="Invoice Number" value={quote.invoice_number} />
+            <DetailRow label="Quote ID" value={quote.quote_number} />
             <DetailRow label="Internal ID" value={quote.id} />
             <DetailRow label="Status" value={quote.quote_status} />
             <DetailRow label="Job Title" value={jobTitle} />
