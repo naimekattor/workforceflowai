@@ -184,7 +184,7 @@ export default async function PublicQuotePage({
                 Quote for {customerLabel}
               </p>
               <h1 className="mb-3 text-3xl font-bold tracking-normal text-slate-900 sm:text-4xl">
-                {quote.invoice_number}
+                {quote.quote_number}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-600">
                 Please review the quote details below. If everything looks
@@ -232,7 +232,7 @@ export default async function PublicQuotePage({
               </h2>
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <DetailRow label="Quote Number" value={quote.invoice_number} />
+              <DetailRow label="Quote Number" value={quote.quote_number} />
               <DetailRow
                 label="Created"
                 value={formatDateTime(quote.created_at)}
