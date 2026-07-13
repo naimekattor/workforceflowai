@@ -227,7 +227,7 @@ export default function Quotes() {
                   <tr key={quote.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <Link href={`/dashboard/quotes/${quote.id}`} className="text-[13px] font-medium text-[#22d3ee] hover:text-[#06b6d4]">
-                        Q-{quote.quote_uuid.slice(0, 4)}
+                        {quote.quote_number}
                       </Link>
                     </td>
                     <td className="px-6 py-4 text-[13px] text-slate-700">{getQuoteCustomerName(quote)}</td>

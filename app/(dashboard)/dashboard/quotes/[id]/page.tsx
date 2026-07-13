@@ -294,7 +294,7 @@ export default function QuoteDetails() {
                       <div>Split ({percentage}%)</div>
                       <div className="mt-2 space-y-1 text-xs text-slate-500">
                         <div>Advance Payment ({percentage}%): <span className="font-bold text-slate-700">{formatCurrency(advanceAmt)}</span></div>
-                        <div>Remaining Balance ({100 - percentage}%): <span className="font-bold text-slate-700">{formatCurrency(remainingAmt)}</span></div>
+                        <div>On Completion ({100 - percentage}%): <span className="font-bold text-slate-700">{formatCurrency(remainingAmt)}</span></div>
                       </div>
                     </div>
                   );

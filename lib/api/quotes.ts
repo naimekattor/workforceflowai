@@ -10,6 +10,7 @@ export interface Quote {
   customer_email?: string;
   quote_status: string;
   quote_uuid: string;
+  quote_number:string;
   job_type: string;
   job_title?: string;
   job_details?: { id?: number; title?: string, site_address?: string, notes?: string, jobstatus?: string } | null;

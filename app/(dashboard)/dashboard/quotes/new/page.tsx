@@ -948,7 +948,7 @@ export default function AddQuote() {
                             <span className="text-slate-900 font-bold">{formatCurrency(advanceAmt)}</span>
                           </div>
                           <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200/60">
-                            <span className="text-slate-600 font-medium">Remaining Balance ({100 - pct}%):</span>
+                            <span className="text-slate-600 font-medium">On Completion ({100 - pct}%):</span>
                             <span className="text-slate-900 font-bold">{formatCurrency(remainingAmt)}</span>
                           </div>
                         </div>

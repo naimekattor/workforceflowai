@@ -153,7 +153,7 @@ export default async function PublicQuotePage({
           <div>Split ({percentage}%)</div>
           <div className="mt-2 space-y-1 text-xs text-slate-500">
             <div>Advance Payment ({percentage}%): <span className="font-bold text-slate-700">{formatCurrency(advanceAmount)}</span></div>
-            <div>Remaining Balance ({100 - percentage}%): <span className="font-bold text-slate-700">{formatCurrency(remainingAmount)}</span></div>
+            <div>On Completion ({100 - percentage}%): <span className="font-bold text-slate-700">{formatCurrency(remainingAmount)}</span></div>
           </div>
         </div>
       );
