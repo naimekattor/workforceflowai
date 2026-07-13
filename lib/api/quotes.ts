@@ -46,8 +46,12 @@ export interface LineItem {
   total_price: string;
 }
 
-export const getQuotes = async (page = 1): Promise<QuoteListResponse> => {
-  const response = await apiClient.get<QuoteListResponse>(`/api/quote/list/?page=${page}`);
+export const getQuotes = async (page = 1, search = ""): Promise<QuoteListResponse> => {
+  const response = await apiClient.get<QuoteListResponse>("/api/quote/list/", {
+    params: {
+      ...(search ? { search } : { page }),
+    },
+  });
   return response.data;
 };
 

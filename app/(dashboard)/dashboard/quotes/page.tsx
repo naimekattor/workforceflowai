@@ -48,19 +48,15 @@ export default function Quotes() {
     customers.find((customer) => customer.id === quote.customer)?.customer_name ||
     `Customer ID: ${quote.customer}`;
 
-  const fetchData = async () => {
+  const fetchQuotes = async (search = '') => {
     try {
       setLoading(true);
-      const [quotesData, customersData] = await Promise.all([
-        getQuotes(1),
-        getCustomers(1)
-      ]);
+      const quotesData = await getQuotes(1, search);
       setQuotes(quotesData.results);
       setTotalCount(quotesData.count);
       setNextQuotePage(getNextQuotePage(quotesData.next));
-      setCustomers(customersData.results);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching quotes:', error);
       setNextQuotePage(null);
     } finally {
       setLoading(false);
@@ -69,9 +65,27 @@ export default function Quotes() {
 
   useEffect(() => {
     if (session?.accessToken) {
-      fetchData();
+      const fetchCustomersData = async () => {
+        try {
+          const customersData = await getCustomers(1);
+          setCustomers(customersData.results);
+        } catch (error) {
+          console.error('Error fetching customers:', error);
+        }
+      };
+      fetchCustomersData();
     }
   }, [session]);
+
+  useEffect(() => {
+    if (session?.accessToken) {
+      const delayDebounceFn = setTimeout(() => {
+        fetchQuotes(searchTerm);
+      }, 300);
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [searchTerm, session]);
 
   const handleDelete = async (id: number) => {
     const confirmed = await confirmAction({
@@ -146,7 +160,7 @@ export default function Quotes() {
 
     try {
       setLoadingMore(true);
-      const data = await getQuotes(nextQuotePage);
+      const data = await getQuotes(nextQuotePage, searchTerm);
       setQuotes((currentQuotes) => mergeQuotes(currentQuotes, data.results));
       setTotalCount(data.count);
       setNextQuotePage(getNextQuotePage(data.next));
@@ -158,10 +172,7 @@ export default function Quotes() {
     }
   };
 
-  const filteredQuotes = quotes.filter(q => 
-    String(q.id).includes(searchTerm) || 
-    getQuoteCustomerName(q).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredQuotes = quotes;
 
   const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
   const isPartialPaid = selectedQuote?.quote_status?.toLowerCase() === 'partial paid' || selectedQuote?.quote_status?.toLowerCase() === 'partial_paid';
@@ -293,7 +304,7 @@ export default function Quotes() {
             <p className="text-[13px] text-slate-500">
               Showing {filteredQuotes.length} of {totalCount} quotes
             </p>
-            {nextQuotePage && (
+            {nextQuotePage && !searchTerm && (
               <button
                 type="button"
                 onClick={handleLoadMoreQuotes}
