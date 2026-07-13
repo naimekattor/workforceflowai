@@ -12,6 +12,7 @@ export interface DashboardStats {
 export interface RecentQuote {
   id: number;
   quote_uuid: string;
+  quote_number: string;
   customer: number;
   customer_name?: string;
   quote_status: string;
@@ -22,6 +23,7 @@ export interface RecentQuote {
 export interface RecentInvoice {
   id: number;
   quote_uuid: string;
+  quote_number: string;
   company_name:string;
   invoice_number: string;
   customer: number;
