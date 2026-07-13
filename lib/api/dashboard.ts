@@ -72,6 +72,7 @@ interface InvoiceListItem {
   invoice_number?: string;
   invoice_uuid?: string;
   quote_uuid?: string;
+  quote_number?: string;
   status?: string;
   quote_status?: string;
   price?: string | number;
@@ -117,6 +118,7 @@ function toRecentInvoice(invoice: InvoiceListItem): RecentInvoice {
   return {
     id: invoice.id,
     quote_uuid: invoice.quote_uuid || invoice.invoice_uuid || "",
+    quote_number: invoice.quote_number || "",
     invoice_number: invoice.invoice_number || `Invoice ${invoice.id}`,
     customer: invoice.customer,
     customer_name: invoice.customer_name,
