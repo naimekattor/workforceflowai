@@ -268,9 +268,7 @@ export default async function PublicQuotePage({
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <DetailRow label="Job Title" value={quote.job_details.title || "Not provided"} />
                 <DetailRow label="Status" value={quote.job_details.jobstatus || "Not provided"} />
-                <div className="sm:col-span-2">
-                  <DetailRow label="Site Address" value={quote.job_details.site_address || "Not provided"} />
-                </div>
+                
                 <div className="sm:col-span-2">
                   <DetailRow label="Job Description" value={quote.job_details.notes || "No description provided."} />
                 </div>
