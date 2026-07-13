@@ -31,7 +31,14 @@ export function getWebSocketBaseUrl(): string {
   if (wsUrl) return wsUrl.replace(/\/+$/, "");
 
   const apiBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL || "");
-  return apiBaseUrl.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
+  let socketUrl = apiBaseUrl.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
+
+  // Auto-upgrade to secure websocket protocol if the page is loaded over HTTPS
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    socketUrl = socketUrl.replace(/^ws:/i, "wss:");
+  }
+
+  return socketUrl;
 }
 
 export function buildWebSocketUrl(path: string): string {

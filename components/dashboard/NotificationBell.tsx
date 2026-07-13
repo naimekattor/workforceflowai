@@ -17,6 +17,7 @@ type SocketMessage = {
   user?: unknown;
   is_read?: unknown;
   created_at?: unknown;
+  timestamp?: unknown;
 };
 
 function isNotification(value: unknown): value is Notification {
@@ -37,20 +38,29 @@ function notificationFromSocketMessage(value: unknown): Notification | null {
   if (!value || typeof value !== "object") return null;
 
   const message = value as SocketMessage;
-  if (isNotification(message.notification)) return message.notification;
-  if (isNotification(message.message)) return message.message;
+
+  if (message.notification && typeof message.notification === "object") {
+    const nested = notificationFromSocketMessage(message.notification);
+    if (nested) return nested;
+  }
+  if (message.message && typeof message.message === "object") {
+    const nested = notificationFromSocketMessage(message.message);
+    if (nested) return nested;
+  }
+
+  const timeVal = message.created_at || message.timestamp;
 
   if (
     typeof message.id === "number" &&
     typeof message.message === "string" &&
-    typeof message.created_at === "string"
+    typeof timeVal === "string"
   ) {
     return {
       id: message.id,
       user: typeof message.user === "number" ? message.user : 0,
       message: message.message,
       is_read: typeof message.is_read === "boolean" ? message.is_read : false,
-      created_at: message.created_at,
+      created_at: timeVal,
     };
   }
 
