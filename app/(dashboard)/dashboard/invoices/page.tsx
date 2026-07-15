@@ -181,7 +181,6 @@ export default function Invoices() {
               <tr className="border-b border-slate-100">
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Invoice Number</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Customer</th>
-                <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Quote UUID</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Status</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Total</th>
                 <th className="px-6 py-4 text-[13px] font-bold text-slate-900">Created</th>
@@ -212,11 +211,7 @@ export default function Invoices() {
                     <td className="px-6 py-4 text-[13px] text-slate-700">
                       {getCustomerLabel(invoice, customerNameById)}
                     </td>
-                    <td className="px-6 py-4 text-[13px] text-slate-700">
-                      <span className="inline-block max-w-[220px] truncate align-bottom" title={invoice.quote_number}>
-                        {invoice.quote_number}
-                      </span>
-                    </td>
+                    
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusClassName(invoice.quote_status)}`}>
                         {invoice.quote_status}
